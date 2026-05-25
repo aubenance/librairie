@@ -106,7 +106,7 @@ class DashboardFrame(ctk.CTkFrame):
         parent.grid_columnconfigure(col, weight=1)
         ctk.CTkFrame(card, fg_color=color, height=5, corner_radius=0).pack(fill="x")
         btn = make_button(card, title, lambda n=nav: self.navigate(n),
-                          color=color, hover=color, width=140, height=44)
+                          color=color, hover_color=color, width=140, height=44)
         btn.pack(pady=18)
         card.bind("<Button-1>", lambda e, n=nav: self.navigate(n))
 

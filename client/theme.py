@@ -49,10 +49,10 @@ def make_entry(parent, placeholder: str = "", width: int = 280,
                         show=show, height=38, font=ctk.CTkFont(size=13))
 
 def make_button(parent, text: str, command=None, color: str = VERT,
-                hover: str = VERT_SOMBRE, width: int = 160,
+                hover_color: str = VERT_SOMBRE, width: int = 160,
                 height: int = 38, size: int = 13) -> ctk.CTkButton:
     return ctk.CTkButton(parent, text=text, command=command,
-                         fg_color=color, hover_color=hover,
+                         fg_color=color, hover_color=hover_color,
                          width=width, height=height,
                          font=ctk.CTkFont(size=size, weight="bold"),
                          corner_radius=6)

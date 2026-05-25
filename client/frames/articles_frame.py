@@ -43,11 +43,11 @@ class ArticlesFrame(ctk.CTkFrame):
 
         make_button(btn_row, "+ Nouvel Article", self._open_add, width=150).pack(side="left", padx=4)
         make_button(btn_row, "Modifier", self._open_edit,
-                    color=BLEU, hover="#0D47A1", width=110).pack(side="left", padx=4)
+                    color=BLEU, hover_color="#0D47A1", width=110).pack(side="left", padx=4)
         make_button(btn_row, "Supprimer", self._delete,
-                    color=ROUGE, hover="#B71C1C", width=110).pack(side="left", padx=4)
+                    color=ROUGE, hover_color="#B71C1C", width=110).pack(side="left", padx=4)
         make_button(btn_row, "Actualiser", self.load_articles,
-                    color="#546E7A", hover="#37474F", width=110).pack(side="left", padx=4)
+                    color="#546E7A", hover_color="#37474F", width=110).pack(side="left", padx=4)
 
         ctk.CTkFrame(self, fg_color=GRIS, height=1).grid(row=0, column=0, sticky="ews")
 
@@ -67,7 +67,7 @@ class ArticlesFrame(ctk.CTkFrame):
         make_button(search_row, "Rechercher",
                     lambda: self.load_articles(self.entry_search.get()), width=120).pack(side="left")
         make_button(search_row, "Tout afficher", lambda: self._reset_search(),
-                    color="#546E7A", hover="#37474F", width=120).pack(side="left", padx=8)
+                    color="#546E7A", hover_color="#37474F", width=120).pack(side="left", padx=8)
 
         self.lbl_count = ctk.CTkLabel(search_row, text="", font=ctk.CTkFont(size=12),
                                        text_color=GRIS_TEXTE)
@@ -146,7 +146,7 @@ class ArticlesFrame(ctk.CTkFrame):
         btn_row.grid(row=row_base+2, column=0, pady=10, padx=18)
         make_button(btn_row, "Enregistrer", self._save, width=128).pack(side="left", padx=4)
         make_button(btn_row, "Annuler", self._close_form,
-                    color="#546E7A", hover="#37474F", width=100).pack(side="left", padx=4)
+                    color="#546E7A", hover_color="#37474F", width=100).pack(side="left", padx=4)
 
         self.lbl_form_err = ctk.CTkLabel(p, text="", text_color=ROUGE,
                                           font=ctk.CTkFont(size=11), wraplength=280)
