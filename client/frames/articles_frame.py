@@ -52,7 +52,8 @@ class ArticlesFrame(ctk.CTkFrame):
         ctk.CTkFrame(self, fg_color=GRIS, height=1).grid(row=0, column=0, sticky="ews")
 
         # Zone principale : liste + formulaire côte à côte
-        main = ctk.CTkFrame(self, fg_color=GRIS_CLAIR)
+        self._main_frame = ctk.CTkFrame(self, fg_color=GRIS_CLAIR)
+        main = self._main_frame
         main.grid(row=1, column=0, sticky="nsew", padx=16, pady=12)
         main.grid_columnconfigure(0, weight=1)
         main.grid_rowconfigure(1, weight=1)
@@ -101,10 +102,9 @@ class ArticlesFrame(ctk.CTkFrame):
         self.tree.bind("<Double-1>", lambda e: self._open_edit())
 
         # ── Panneau formulaire (droite, caché par défaut) ──
-        self.form_panel = ctk.CTkFrame(main, fg_color=BLANC, corner_radius=10, width=320)
+        self.form_panel = ctk.CTkScrollableFrame(main, fg_color=BLANC, corner_radius=10, width=310)
         self.form_panel.grid(row=1, column=1, sticky="nsew", padx=(10,0))
         self.form_panel.grid_remove()
-        self.form_panel.grid_propagate(False)
         main.grid_columnconfigure(1, minsize=0)
         self._build_form()
 
@@ -222,11 +222,11 @@ class ArticlesFrame(ctk.CTkFrame):
 
     def _show_form(self):
         self.form_panel.grid()
-        self.form_panel.master.grid_columnconfigure(1, minsize=340)
+        self._main_frame.grid_columnconfigure(1, minsize=340)
 
     def _close_form(self):
         self.form_panel.grid_remove()
-        self.form_panel.master.grid_columnconfigure(1, minsize=0)
+        self._main_frame.grid_columnconfigure(1, minsize=0)
 
     def _clear_form(self):
         for attr in ("entry_code","entry_titre","entry_auteur","entry_cat",
