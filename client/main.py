@@ -187,10 +187,24 @@ class LibrairieApp(ctk.CTk):
 
         builder = frame_map.get(section)
         if builder:
-            frame = builder()
-            if frame:
-                frame.pack(fill="both", expand=True)
-                self._current_frame = frame
+            try:
+                frame = builder()
+                if frame:
+                    frame.pack(fill="both", expand=True)
+                    self._current_frame = frame
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                lbl = ctk.CTkLabel(
+                    self._content,
+                    text=f"❌ Erreur lors du chargement de la page :\n"
+                         f"{type(e).__name__}: {e}\n\n"
+                         f"Vérifiez la console pour plus de détails.",
+                    text_color=ROUGE,
+                    font=ctk.CTkFont(size=13),
+                    wraplength=700,
+                    justify="center")
+                lbl.pack(pady=80, padx=40)
 
     def _deconnecter(self):
         if messagebox.askyesno("Déconnexion", "Voulez-vous vraiment vous déconnecter ?"):

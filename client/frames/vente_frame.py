@@ -126,6 +126,7 @@ class VenteFrame(ctk.CTkFrame):
                      text_color=ORANGE).grid(row=0, column=0, padx=16, pady=(14,6), sticky="w")
 
         # Grille panier
+    
         pan_frame = ctk.CTkFrame(right, fg_color=BLANC)
         pan_frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0,6))
         pan_frame.grid_columnconfigure(0, weight=1)
