@@ -34,7 +34,7 @@ class ArticlesFrame(ctk.CTkFrame):
         hdr.grid_propagate(False)
         hdr.grid_columnconfigure(1, weight=1)
 
-        ctk.CTkLabel(hdr, text="  Gestion des Articles",
+        ctk.CTkLabel(hdr, text=" Gestion des Articles",
                      font=ctk.CTkFont(size=18, weight="bold"),
                      text_color=NOIR_TEXTE).grid(row=0, column=0, padx=16, pady=14, sticky="w")
 
@@ -197,7 +197,7 @@ class ArticlesFrame(ctk.CTkFrame):
 
     def _open_add(self):
         self._mode = "add"
-        self.lbl_form_title.configure(text="  Nouvel Article", text_color=VERT)
+        self.lbl_form_title.configure(text=" Nouvel Article", text_color=VERT)
         self._clear_form()
         self._show_form()
 
@@ -208,7 +208,7 @@ class ArticlesFrame(ctk.CTkFrame):
         art = self._get_article_by_id(self._sel_id)
         if not art: return
         self._mode = "edit"
-        self.lbl_form_title.configure(text="  Modifier l'Article", text_color=BLEU)
+        self.lbl_form_title.configure(text=" Modifier l'Article", text_color=BLEU)
         self._clear_form()
         self.entry_code.insert(0, art.get("code",""))
         self.entry_titre.insert(0, art.get("titre",""))

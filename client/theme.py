@@ -119,7 +119,7 @@ def make_treeview(parent, columns: list, heights: dict = None) -> ttk.Treeview:
 #  BARRE DE RECHERCHE
 # ─────────────────────────────────────────
 
-def make_search_bar(parent, on_search, placeholder="🔍  Rechercher...") -> tuple:
+def make_search_bar(parent, on_search, placeholder=" Rechercher...") -> tuple:
     frame = ctk.CTkFrame(parent, fg_color=BLANC, corner_radius=8,
                          border_width=1, border_color=GRIS)
     entry = ctk.CTkEntry(frame, placeholder_text=placeholder,

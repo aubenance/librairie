@@ -1314,6 +1314,9 @@
    'C:\\Users\\AC '
    'PRSEP\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\pprint.py',
    'PYMODULE'),
+  ('print_service',
+   'C:\\Users\\AC PRSEP\\Desktop\\LibrairieCI_Pro\\client\\print_service.py',
+   'PYMODULE'),
   ('py_compile',
    'C:\\Users\\AC '
    'PRSEP\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\py_compile.py',

@@ -38,17 +38,17 @@ class VenteFrame(ctk.CTkFrame):
         header.grid_propagate(False)
         header.grid_columnconfigure(1, weight=1)
 
-        ctk.CTkLabel(header, text="🛒  Nouvelle Vente",
+        ctk.CTkLabel(header, text=" Nouvelle Vente",
                      font=ctk.CTkFont(size=20, weight="bold"),
                      text_color=NOIR_TEXTE).grid(row=0, column=0, padx=20, pady=18, sticky="w")
 
         self.lbl_date = ctk.CTkLabel(
             header,
-            text=datetime.now().strftime("📅  %A %d/%m/%Y  •  %H:%M"),
+            text=datetime.now().strftime(" %A %d/%m/%Y  •  %H:%M"),
             font=ctk.CTkFont(size=12), text_color=GRIS_TEXTE)
         self.lbl_date.grid(row=0, column=1, padx=20, sticky="e")
 
-        make_button(header, "🔄 Actualiser stock", self._load_articles,
+        make_button(header, " Actualiser stock", self._load_articles,
                     color=GRIS_TEXTE, hover_color="#424242",
                     width=150, height=34).grid(row=0, column=2, padx=16)
 
@@ -62,7 +62,7 @@ class VenteFrame(ctk.CTkFrame):
         # Titre + compteur
         top_bar = ctk.CTkFrame(left, fg_color=BLANC)
         top_bar.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 4))
-        ctk.CTkLabel(top_bar, text="📚 Catalogue",
+        ctk.CTkLabel(top_bar, text=" Catalogue",
                      font=ctk.CTkFont(size=15, weight="bold"),
                      text_color=VERT).pack(side="left")
         self.lbl_cat_count = ctk.CTkLabel(top_bar, text="",
@@ -75,7 +75,7 @@ class VenteFrame(ctk.CTkFrame):
         search_row.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 6))
         self.entry_search = ctk.CTkEntry(
             search_row,
-            placeholder_text="🔍  Titre, code, auteur...",
+            placeholder_text=" Titre, code, auteur...",
             height=34, font=ctk.CTkFont(size=12))
         self.entry_search.pack(side="left", fill="x", expand=True, padx=8, pady=6)
         self.entry_search.bind("<Return>",
@@ -133,7 +133,7 @@ class VenteFrame(ctk.CTkFrame):
         right.grid_columnconfigure(0, weight=1)
         right.grid_rowconfigure(1, weight=1)
 
-        ctk.CTkLabel(right, text="🧾  Panier",
+        ctk.CTkLabel(right, text=" Panier",
                      font=ctk.CTkFont(size=15, weight="bold"),
                      text_color=ORANGE).grid(row=0, column=0,
                                               padx=16, pady=(14, 6), sticky="w")
@@ -169,10 +169,10 @@ class VenteFrame(ctk.CTkFrame):
         # Boutons panier
         btn_pan = ctk.CTkFrame(right, fg_color=BLANC)
         btn_pan.grid(row=2, column=0, padx=10, pady=4, sticky="ew")
-        make_button(btn_pan, "🗑 Retirer", self._remove_line,
+        make_button(btn_pan, "Retirer", self._remove_line,
                     color=ROUGE, hover_color="#B71C1C",
                     width=110, height=32).pack(side="left", padx=4)
-        make_button(btn_pan, "🔄 Vider", self._clear_cart,
+        make_button(btn_pan, " Vider", self._clear_cart,
                     color="#757575", hover_color="#424242",
                     width=90, height=32).pack(side="left")
 
@@ -330,7 +330,7 @@ class VenteFrame(ctk.CTkFrame):
 
         total  = sum(lg["prix"] * lg["qte"] for lg in self._panier)
         recap  = "\n".join([
-            f"  • {lg['titre'][:28]}  x{lg['qte']}  →  {format_fcfa(lg['prix']*lg['qte'])}"
+            f" • {lg['titre'][:28]}  x{lg['qte']}  →  {format_fcfa(lg['prix']*lg['qte'])}"
             for lg in self._panier])
 
         if not messagebox.askyesno(
@@ -425,7 +425,7 @@ class VenteFrame(ctk.CTkFrame):
             sous = lg["prix"] * lg["qte"]
             f = ctk.CTkFrame(body, fg_color=BLANC, corner_radius=6)
             f.pack(fill="x", padx=20, pady=2)
-            ctk.CTkLabel(f, text=f"  {lg['titre'][:30]}",
+            ctk.CTkLabel(f, text=f" {lg['titre'][:30]}",
                          font=ctk.CTkFont(size=12),
                          text_color=NOIR_TEXTE, anchor="w").pack(side="left",
                                                                   fill="x", expand=True)
@@ -460,7 +460,7 @@ class VenteFrame(ctk.CTkFrame):
                      for lg in panier]
             imprimer_recu(numero, session.nom_complet, items, total)
 
-        make_button(btn_frame, "🖨️  Imprimer le reçu", do_print,
+        make_button(btn_frame, " Imprimer le reçu", do_print,
                     color=BLEU, hover_color="#0D47A1",
                     width=200, height=40).pack(side="left", padx=16, pady=12)
         make_button(btn_frame, "Fermer", win.destroy,

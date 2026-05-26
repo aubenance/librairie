@@ -49,7 +49,7 @@ def imprimer_recu(numero: str, vendeur: str, panier: list, total: float):
 </head>
 <body>
 <div class="header">
-  <h1>📚 LibrairieCI</h1>
+  <h1> LibrairieCI</h1>
   <p>Gestion Professionnelle</p>
   <p>Côte d'Ivoire</p>
 </div>
@@ -84,7 +84,7 @@ def imprimer_recu(numero: str, vendeur: str, panier: list, total: float):
 </div>
 
 <div class="no-print">
-  <button class="btn" onclick="window.print()">🖨️ Imprimer ce reçu</button>
+  <button class="btn" onclick="window.print()"> Imprimer ce reçu</button>
 </div>
 <script>
   // Ouvrir la boîte d'impression automatiquement
