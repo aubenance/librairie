@@ -25,6 +25,13 @@ class LibrairieApp(ctk.CTk):
 
     def __init__(self):
         super().__init__()
+
+        # ── Fix encodage Unicode/Emoji sur Windows ──
+        try:
+            self.tk.call("encoding", "system", "utf-8")
+        except Exception:
+            pass
+
         setup_theme()
         self.title("LibrairieCI  –  Gestion de Librairie")
         self.geometry("1280x780")
@@ -171,9 +178,12 @@ class LibrairieApp(ctk.CTk):
             btn.configure(fg_color="#00A04A" if s == section else "transparent",
                           font=ctk.CTkFont(size=13, weight="bold" if s == section else "normal"))
 
-        # Détruire frame précédent
+        # Détruire TOUT le contenu précédent
         if self._current_frame:
             self._current_frame.destroy()
+            self._current_frame = None
+        for w in self._content.winfo_children():
+            w.destroy()
 
         # Charger nouveau frame
         frame_map = {
@@ -193,8 +203,6 @@ class LibrairieApp(ctk.CTk):
                     frame.pack(fill="both", expand=True)
                     self._current_frame = frame
             except Exception as e:
-                import traceback
-                traceback.print_exc()
                 lbl = ctk.CTkLabel(
                     self._content,
                     text=f"❌ Erreur lors du chargement de la page :\n"
