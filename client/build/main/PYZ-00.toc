@@ -790,18 +790,6 @@
    'C:\\Users\\AC '
    'PRSEP\\Desktop\\LibrairieCI_Pro\\client\\frames\\login_frame.py',
    'PYMODULE'),
-  ('frames.rapports_frame',
-   'C:\\Users\\AC '
-   'PRSEP\\Desktop\\LibrairieCI_Pro\\client\\frames\\rapports_frame.py',
-   'PYMODULE'),
-  ('frames.stock_frame',
-   'C:\\Users\\AC '
-   'PRSEP\\Desktop\\LibrairieCI_Pro\\client\\frames\\stock_frame.py',
-   'PYMODULE'),
-  ('frames.users_frame',
-   'C:\\Users\\AC '
-   'PRSEP\\Desktop\\LibrairieCI_Pro\\client\\frames\\users_frame.py',
-   'PYMODULE'),
   ('frames.vente_frame',
    'C:\\Users\\AC '
    'PRSEP\\Desktop\\LibrairieCI_Pro\\client\\frames\\vente_frame.py',
