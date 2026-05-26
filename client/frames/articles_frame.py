@@ -34,7 +34,7 @@ class ArticlesFrame(ctk.CTkFrame):
         hdr.grid_propagate(False)
         hdr.grid_columnconfigure(1, weight=1)
 
-        ctk.CTkLabel(hdr, text=" Gestion des Articles",
+        ctk.CTkLabel(hdr, text="  Gestion des Articles",
                      font=ctk.CTkFont(size=18, weight="bold"),
                      text_color=NOIR_TEXTE).grid(row=0, column=0, padx=16, pady=14, sticky="w")
 
@@ -43,17 +43,16 @@ class ArticlesFrame(ctk.CTkFrame):
 
         make_button(btn_row, "+ Nouvel Article", self._open_add, width=150).pack(side="left", padx=4)
         make_button(btn_row, "Modifier", self._open_edit,
-                    color=BLEU, hover_color="#0D47A1", width=110).pack(side="left", padx=4)
+                    color=BLEU, hover="#0D47A1", width=110).pack(side="left", padx=4)
         make_button(btn_row, "Supprimer", self._delete,
-                    color=ROUGE, hover_color="#B71C1C", width=110).pack(side="left", padx=4)
+                    color=ROUGE, hover="#B71C1C", width=110).pack(side="left", padx=4)
         make_button(btn_row, "Actualiser", self.load_articles,
-                    color="#546E7A", hover_color="#37474F", width=110).pack(side="left", padx=4)
+                    color="#546E7A", hover="#37474F", width=110).pack(side="left", padx=4)
 
         ctk.CTkFrame(self, fg_color=GRIS, height=1).grid(row=0, column=0, sticky="ews")
 
         # Zone principale : liste + formulaire côte à côte
-        self._main_frame = ctk.CTkFrame(self, fg_color=GRIS_CLAIR)
-        main = self._main_frame
+        main = ctk.CTkFrame(self, fg_color=GRIS_CLAIR)
         main.grid(row=1, column=0, sticky="nsew", padx=16, pady=12)
         main.grid_columnconfigure(0, weight=1)
         main.grid_rowconfigure(1, weight=1)
@@ -68,7 +67,7 @@ class ArticlesFrame(ctk.CTkFrame):
         make_button(search_row, "Rechercher",
                     lambda: self.load_articles(self.entry_search.get()), width=120).pack(side="left")
         make_button(search_row, "Tout afficher", lambda: self._reset_search(),
-                    color="#546E7A", hover_color="#37474F", width=120).pack(side="left", padx=8)
+                    color="#546E7A", hover="#37474F", width=120).pack(side="left", padx=8)
 
         self.lbl_count = ctk.CTkLabel(search_row, text="", font=ctk.CTkFont(size=12),
                                        text_color=GRIS_TEXTE)
@@ -102,9 +101,10 @@ class ArticlesFrame(ctk.CTkFrame):
         self.tree.bind("<Double-1>", lambda e: self._open_edit())
 
         # ── Panneau formulaire (droite, caché par défaut) ──
-        self.form_panel = ctk.CTkScrollableFrame(main, fg_color=BLANC, corner_radius=10, width=310)
+        self.form_panel = ctk.CTkFrame(main, fg_color=BLANC, corner_radius=10, width=320)
         self.form_panel.grid(row=1, column=1, sticky="nsew", padx=(10,0))
         self.form_panel.grid_remove()
+        self.form_panel.grid_propagate(False)
         main.grid_columnconfigure(1, minsize=0)
         self._build_form()
 
@@ -146,7 +146,7 @@ class ArticlesFrame(ctk.CTkFrame):
         btn_row.grid(row=row_base+2, column=0, pady=10, padx=18)
         make_button(btn_row, "Enregistrer", self._save, width=128).pack(side="left", padx=4)
         make_button(btn_row, "Annuler", self._close_form,
-                    color="#546E7A", hover_color="#37474F", width=100).pack(side="left", padx=4)
+                    color="#546E7A", hover="#37474F", width=100).pack(side="left", padx=4)
 
         self.lbl_form_err = ctk.CTkLabel(p, text="", text_color=ROUGE,
                                           font=ctk.CTkFont(size=11), wraplength=280)
@@ -197,7 +197,7 @@ class ArticlesFrame(ctk.CTkFrame):
 
     def _open_add(self):
         self._mode = "add"
-        self.lbl_form_title.configure(text=" Nouvel Article", text_color=VERT)
+        self.lbl_form_title.configure(text="  Nouvel Article", text_color=VERT)
         self._clear_form()
         self._show_form()
 
@@ -208,7 +208,7 @@ class ArticlesFrame(ctk.CTkFrame):
         art = self._get_article_by_id(self._sel_id)
         if not art: return
         self._mode = "edit"
-        self.lbl_form_title.configure(text=" Modifier l'Article", text_color=BLEU)
+        self.lbl_form_title.configure(text="  Modifier l'Article", text_color=BLEU)
         self._clear_form()
         self.entry_code.insert(0, art.get("code",""))
         self.entry_titre.insert(0, art.get("titre",""))
@@ -222,11 +222,11 @@ class ArticlesFrame(ctk.CTkFrame):
 
     def _show_form(self):
         self.form_panel.grid()
-        self._main_frame.grid_columnconfigure(1, minsize=340)
+        self.form_panel.master.grid_columnconfigure(1, minsize=340)
 
     def _close_form(self):
         self.form_panel.grid_remove()
-        self._main_frame.grid_columnconfigure(1, minsize=0)
+        self.form_panel.master.grid_columnconfigure(1, minsize=0)
 
     def _clear_form(self):
         for attr in ("entry_code","entry_titre","entry_auteur","entry_cat",
