@@ -35,7 +35,7 @@ class UsersFrame(ctk.CTkFrame):
 
  btn_frame = ctk.CTkFrame(header, fg_color=BLANC)
  btn_frame.grid(row=0, column=2, padx=16, pady=10)
- make_button(btn_frame, "➕ Nouveau", self._open_add, width=110, height=36).pack(side="left", padx=4)
+ make_button(btn_frame, "➕ NouveauX", self._open_add, width=110, height=36).pack(side="left", padx=4)
  make_button(btn_frame, "✏ Modifier", self._open_edit, color=BLEU, hover_color="#0D47A1", width=105, height=36).pack(side="left", padx=4)
  make_button(btn_frame, " Réinit. MDP", self._reset_mdp, color="#7B1FA2", hover_color="#4A148C", width=130, height=36).pack(side="left", padx=4)
  make_button(btn_frame, " Actualiser", self._load, color=GRIS_TEXTE, hover_color="#424242", width=115, height=36).pack(side="left", padx=4)

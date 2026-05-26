@@ -1,5 +1,5 @@
 ('C:\\Users\\AC '
- 'PRSEP\\Desktop\\LibrairieCI_Pro\\client\\build\\main\\PYZ-00.pyz',
+ 'PRSEP\\Desktop\\LibrairieCI_Pro\\CLIENT\\build\\main\\PYZ-00.pyz',
  [('PIL',
    'C:\\Users\\AC '
    'PRSEP\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\site-packages\\PIL\\__init__.py',
@@ -345,7 +345,7 @@
    'PRSEP\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\_threading_local.py',
    'PYMODULE'),
   ('api_client',
-   'C:\\Users\\AC PRSEP\\Desktop\\LibrairieCI_Pro\\client\\api_client.py',
+   'C:\\Users\\AC PRSEP\\Desktop\\LibrairieCI_Pro\\CLIENT\\api_client.py',
    'PYMODULE'),
   ('argparse',
    'C:\\Users\\AC '
@@ -776,23 +776,23 @@
    'PRSEP\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\fractions.py',
    'PYMODULE'),
   ('frames',
-   'C:\\Users\\AC PRSEP\\Desktop\\LibrairieCI_Pro\\client\\frames\\__init__.py',
+   'C:\\Users\\AC PRSEP\\Desktop\\LibrairieCI_Pro\\CLIENT\\frames\\__init__.py',
    'PYMODULE'),
   ('frames.articles_frame',
    'C:\\Users\\AC '
-   'PRSEP\\Desktop\\LibrairieCI_Pro\\client\\frames\\articles_frame.py',
+   'PRSEP\\Desktop\\LibrairieCI_Pro\\CLIENT\\frames\\articles_frame.py',
    'PYMODULE'),
   ('frames.dashboard_frame',
    'C:\\Users\\AC '
-   'PRSEP\\Desktop\\LibrairieCI_Pro\\client\\frames\\dashboard_frame.py',
+   'PRSEP\\Desktop\\LibrairieCI_Pro\\CLIENT\\frames\\dashboard_frame.py',
    'PYMODULE'),
   ('frames.login_frame',
    'C:\\Users\\AC '
-   'PRSEP\\Desktop\\LibrairieCI_Pro\\client\\frames\\login_frame.py',
+   'PRSEP\\Desktop\\LibrairieCI_Pro\\CLIENT\\frames\\login_frame.py',
    'PYMODULE'),
   ('frames.vente_frame',
    'C:\\Users\\AC '
-   'PRSEP\\Desktop\\LibrairieCI_Pro\\client\\frames\\vente_frame.py',
+   'PRSEP\\Desktop\\LibrairieCI_Pro\\CLIENT\\frames\\vente_frame.py',
    'PYMODULE'),
   ('ftplib',
    'C:\\Users\\AC '
@@ -1303,7 +1303,7 @@
    'PRSEP\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\pprint.py',
    'PYMODULE'),
   ('print_service',
-   'C:\\Users\\AC PRSEP\\Desktop\\LibrairieCI_Pro\\client\\print_service.py',
+   'C:\\Users\\AC PRSEP\\Desktop\\LibrairieCI_Pro\\CLIENT\\print_service.py',
    'PYMODULE'),
   ('py_compile',
    'C:\\Users\\AC '
@@ -1466,7 +1466,7 @@
    'PRSEP\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\textwrap.py',
    'PYMODULE'),
   ('theme',
-   'C:\\Users\\AC PRSEP\\Desktop\\LibrairieCI_Pro\\client\\theme.py',
+   'C:\\Users\\AC PRSEP\\Desktop\\LibrairieCI_Pro\\CLIENT\\theme.py',
    'PYMODULE'),
   ('threading',
    'C:\\Users\\AC '
