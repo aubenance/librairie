@@ -1,137 +1,275 @@
+# -*- coding: utf-8 -*-
+
 """
-LibrairieCI - Écran de connexion
+LibrairieCI - Login Frame
 """
 
 import customtkinter as ctk
-import tkinter as tk
+
+from tkinter import messagebox
+
 from theme import *
-from api_client import APIClient, session, load_config, save_config
-import threading
+from api_client import APIClient, session
 
 
 class LoginFrame(ctk.CTkFrame):
 
- def __init__(self, parent, on_success):
- super().__init__(parent, fg_color=GRIS_CLAIR)
- self.on_success = on_success
- self._build()
+    def __init__(self, parent, on_success):
 
- def _build(self):
- self.grid_columnconfigure(0, weight=1)
- self.grid_columnconfigure(1, weight=1)
- self.grid_rowconfigure(0, weight=1)
+        super().__init__(
+            parent,
+            fg_color=GRIS_CLAIR
+        )
 
- # ── Panneau gauche : bannière verte ──
- left = ctk.CTkFrame(self, fg_color=VERT, corner_radius=0)
- left.grid(row=0, column=0, sticky="nsew")
- left.grid_rowconfigure((0,1,2,3,4), weight=1)
+        self.on_success = on_success
 
- ctk.CTkLabel(left, text="", font=ctk.CTkFont(size=72)).grid(row=1, pady=(40,10))
- ctk.CTkLabel(left, text="LibrairieCI",
- font=ctk.CTkFont(size=36, weight="bold"),
- text_color=BLANC).grid(row=2)
- ctk.CTkLabel(left, text="Gestion de Librairie\nCôte d'Ivoire",
- font=ctk.CTkFont(size=15), text_color="#C8E6C9",
- justify="center").grid(row=3, pady=(10, 0))
- ctk.CTkLabel(left, text="Version 2.0 • Professionnel",
- font=ctk.CTkFont(size=11), text_color="#81C784").grid(row=4, pady=(0,30))
+        self._build()
 
- # ── Panneau droit : formulaire ──
- right = ctk.CTkFrame(self, fg_color=BLANC, corner_radius=0)
- right.grid(row=0, column=1, sticky="nsew")
- right.grid_rowconfigure((0,1,2,3,4,5,6,7,8), weight=1)
- right.grid_columnconfigure(0, weight=1)
+    # ─────────────────────────────────────
+    # UI
+    # ─────────────────────────────────────
 
- ctk.CTkLabel(right, text="Connexion",
- font=ctk.CTkFont(size=26, weight="bold"),
- text_color=NOIR_TEXTE).grid(row=1, pady=(40, 4))
- ctk.CTkLabel(right, text="Entrez vos identifiants pour accéder",
- font=ctk.CTkFont(size=13), text_color=GRIS_TEXTE).grid(row=2, pady=(0,20))
+    def _build(self):
 
- # Serveur URL
- srv_frame = ctk.CTkFrame(right, fg_color=GRIS_CLAIR, corner_radius=8)
- srv_frame.grid(row=3, padx=60, sticky="ew", pady=(0,8))
- ctk.CTkLabel(srv_frame, text=" Serveur :", font=ctk.CTkFont(size=12),
- text_color=GRIS_TEXTE).pack(side="left", padx=10, pady=8)
- self.entry_server = ctk.CTkEntry(srv_frame, width=220, height=30,
- font=ctk.CTkFont(size=12))
- self.entry_server.insert(0, session.config.get("server_url", "http://localhost:8000"))
- self.entry_server.pack(side="left", padx=6, pady=8)
- self.lbl_conn = ctk.CTkLabel(srv_frame, text="", font=ctk.CTkFont(size=11), width=60)
- self.lbl_conn.pack(side="left", padx=4)
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=1)
 
- # Identifiant
- ctk.CTkLabel(right, text="Identifiant",
- font=ctk.CTkFont(size=13, weight="bold"),
- text_color=GRIS_TEXTE, anchor="w").grid(row=4, padx=60, sticky="ew")
- self.entry_user = make_entry(right, "ex: admin", width=0)
- self.entry_user.grid(row=5, padx=60, sticky="ew", pady=(2, 8))
+        container = ctk.CTkFrame(
+            self,
+            width=460,
+            height=520,
+            fg_color=BLANC,
+            corner_radius=18
+        )
 
- # Mot de passe
- ctk.CTkLabel(right, text="Mot de passe",
- font=ctk.CTkFont(size=13, weight="bold"),
- text_color=GRIS_TEXTE, anchor="w").grid(row=6, padx=60, sticky="ew")
- self.entry_pass = make_entry(right, "••••••••", show="•", width=0)
- self.entry_pass.grid(row=7, padx=60, sticky="ew", pady=(2, 4))
- self.entry_pass.bind("<Return>", lambda e: self._do_login())
+        container.grid(
+            row=0,
+            column=0
+        )
 
- # Message erreur
- self.lbl_err = ctk.CTkLabel(right, text="", text_color=ROUGE,
- font=ctk.CTkFont(size=12), wraplength=320)
- self.lbl_err.grid(row=8, padx=60, pady=4)
+        container.grid_propagate(False)
 
- # Bouton connexion
- self.btn_login = make_button(right, " SE CONNECTER ", self._do_login,
- width=0, height=44, size=14)
- self.btn_login.grid(row=9, padx=60, sticky="ew", pady=(4, 6))
+        # TITRE
 
- # Tester connexion
- ctk.CTkButton(right, text="Tester la connexion serveur", command=self._test_conn,
- fg_color="transparent", text_color=VERT, hover_color=VERT_CLAIR,
- font=ctk.CTkFont(size=12), height=30).grid(row=10, pady=(0,30))
+        ctk.CTkLabel(
+            container,
+            text="Connexion",
+            font=ctk.CTkFont(
+                size=32,
+                weight="bold"
+            ),
+            text_color=VERT
+        ).pack(
+            pady=(40, 10)
+        )
 
- def _test_conn(self):
- url = self.entry_server.get().strip()
- cfg = load_config()
- cfg["server_url"] = url
- save_config(cfg)
- session.config = cfg
- self.lbl_conn.configure(text="⏳", text_color=ORANGE)
- self.update_idletasks()
+        ctk.CTkLabel(
+            container,
+            text="Entrez vos identifiants",
+            font=ctk.CTkFont(size=14),
+            text_color=GRIS_TEXTE
+        ).pack(
+            pady=(0, 25)
+        )
 
- def check():
- ok = APIClient.test_connection()
- self.lbl_conn.configure(
- text="✅ OK" if ok else "❌ Hors ligne",
- text_color=VERT if ok else ROUGE
- )
- threading.Thread(target=check, daemon=True).start()
+        # URL SERVEUR
 
- def _do_login(self):
- url = self.entry_server.get().strip()
- user = self.entry_user.get().strip()
- pwd = self.entry_pass.get()
+        self.entry_server = ctk.CTkEntry(
+            container,
+            height=42,
+            width=360
+        )
 
- if not url or not user or not pwd:
- self.lbl_err.configure(text="⚠ Tous les champs sont requis.")
- return
+        self.entry_server.insert(
+            0,
+            session.config.get(
+                "server_url",
+                ""
+            )
+        )
 
- # Sauvegarder l'URL du serveur
- cfg = load_config()
- cfg["server_url"] = url
- save_config(cfg)
- session.config = cfg
+        self.entry_server.pack(
+            pady=8
+        )
 
- self.btn_login.configure(text="Connexion...", state="disabled")
- self.lbl_err.configure(text="")
- self.update_idletasks()
+        # USERNAME
 
- def do():
- result = APIClient.login(user, pwd)
- self.btn_login.configure(text=" SE CONNECTER ", state="normal")
- if result["ok"]:
- self.on_success()
- else:
- self.lbl_err.configure(text=result["error"])
+        ctk.CTkLabel(
+            container,
+            text="Identifiant",
+            anchor="w",
+            text_color=NOIR_TEXTE
+        ).pack(
+            fill="x",
+            padx=50,
+            pady=(20, 4)
+        )
 
- threading.Thread(target=do, daemon=True).start()
+        self.entry_user = ctk.CTkEntry(
+            container,
+            height=44,
+            width=360
+        )
+
+        self.entry_user.pack()
+
+        # PASSWORD
+
+        ctk.CTkLabel(
+            container,
+            text="Mot de passe",
+            anchor="w",
+            text_color=NOIR_TEXTE
+        ).pack(
+            fill="x",
+            padx=50,
+            pady=(20, 4)
+        )
+
+        self.entry_pass = ctk.CTkEntry(
+            container,
+            show="*",
+            height=44,
+            width=360
+        )
+
+        self.entry_pass.pack()
+
+        # STATUS
+
+        self.lbl_status = ctk.CTkLabel(
+            container,
+            text="",
+            text_color=ROUGE,
+            font=ctk.CTkFont(size=12)
+        )
+
+        self.lbl_status.pack(
+            pady=(20, 0)
+        )
+
+        # BTN LOGIN
+
+        self.btn_login = ctk.CTkButton(
+            container,
+            text="SE CONNECTER",
+            command=self._login,
+            fg_color=VERT,
+            hover_color=VERT_SOMBRE,
+            height=48,
+            width=360,
+            font=ctk.CTkFont(
+                size=15,
+                weight="bold"
+            )
+        )
+
+        self.btn_login.pack(
+            pady=(30, 10)
+        )
+
+        # TEST
+
+        ctk.CTkButton(
+            container,
+            text="Tester la connexion serveur",
+            command=self._test_server,
+            fg_color="transparent",
+            text_color=VERT,
+            hover_color="#E8F5E9"
+        ).pack()
+
+    # ─────────────────────────────────────
+    # TEST SERVER
+    # ─────────────────────────────────────
+
+    def _test_server(self):
+
+        url = self.entry_server.get().strip()
+
+        session.config["server_url"] = url
+
+        ok = APIClient.test_connection()
+
+        if ok:
+
+            self.lbl_status.configure(
+                text="Connexion serveur OK",
+                text_color=VERT
+            )
+
+        else:
+
+            self.lbl_status.configure(
+                text="Serveur inaccessible",
+                text_color=ROUGE
+            )
+
+    # ─────────────────────────────────────
+    # LOGIN
+    # ─────────────────────────────────────
+
+    def _login(self):
+
+        username = self.entry_user.get().strip()
+
+        password = self.entry_pass.get().strip()
+
+        server = self.entry_server.get().strip()
+
+        if not username or not password:
+
+            self.lbl_status.configure(
+                text="Veuillez remplir les champs"
+            )
+
+            return
+
+        session.config["server_url"] = server
+
+        self.btn_login.configure(
+            state="disabled",
+            text="Connexion..."
+        )
+
+        self.update()
+
+        result = APIClient.login(
+            username,
+            password
+        )
+
+        self.btn_login.configure(
+            state="normal",
+            text="SE CONNECTER"
+        )
+
+        if result["ok"]:
+
+            self.lbl_status.configure(
+                text="Connexion reussie",
+                text_color=VERT
+            )
+
+            self.after(
+                500,
+                self.on_success
+            )
+
+        else:
+
+            self.lbl_status.configure(
+                text=result.get(
+                    "error",
+                    "Erreur connexion"
+                ),
+                text_color=ROUGE
+            )
+
+            messagebox.showerror(
+                "Connexion",
+                result.get(
+                    "error",
+                    "Erreur connexion"
+                )
+            )
