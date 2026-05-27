@@ -1,4 +1,7 @@
-customtkinter==5.2.2
-requests==2.31.0
-pillow==10.3.0
-pyinstaller==6.7.0
+fastapi
+uvicorn[standard]
+sqlalchemy
+pydantic
+requests
+PyJWT
+python-multipart

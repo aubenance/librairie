@@ -9,35 +9,44 @@ import os
 from typing import Optional
 
 # ─────────────────────────────────────────
-#  CONFIG (modifiable via config.json)
+# CONFIG
 # ─────────────────────────────────────────
 
-CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+CONFIG_FILE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "config.json"
+)
 
 DEFAULT_CONFIG = {
-    "server_url": "http://localhost:8000",
+    "server_url": "https://librairie-production-23ef.up.railway.app",
     "app_name": "LibrairieCI",
     "version": "2.0",
-    "timeout": 10
+    "timeout": 15
 }
+
 
 def load_config() -> dict:
     if os.path.exists(CONFIG_FILE):
         try:
-            with open(CONFIG_FILE, "r") as f:
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                 cfg = json.load(f)
                 DEFAULT_CONFIG.update(cfg)
-        except Exception:
-            pass
+        except Exception as e:
+            print("Erreur chargement config :", e)
+
     return DEFAULT_CONFIG
 
+
 def save_config(cfg: dict):
-    with open(CONFIG_FILE, "w") as f:
-        json.dump(cfg, f, indent=2)
+    try:
+        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, indent=2)
+    except Exception as e:
+        print("Erreur sauvegarde config :", e)
 
 
 # ─────────────────────────────────────────
-#  SESSION
+# SESSION
 # ─────────────────────────────────────────
 
 class Session:
@@ -53,123 +62,255 @@ class Session:
 
     @property
     def headers(self) -> dict:
-        return {"Authorization": f"Bearer {self.token}"}
+        if self.token:
+            return {
+                "Authorization": f"Bearer {self.token}"
+            }
+        return {}
+
 
 session = Session()
 session.config = load_config()
 
 
 # ─────────────────────────────────────────
-#  CLASSE PRINCIPALE API
+# API CLIENT
 # ─────────────────────────────────────────
 
 class APIClient:
 
+    # ─────────────────────────────────────
+    # OUTILS INTERNES
+    # ─────────────────────────────────────
+
     @staticmethod
-    def _url(path: str) -> str:
-        base = session.config.get("server_url", "http://localhost:8000").rstrip("/")
-        return f"{base}{path}"
+    def _base_url() -> str:
+        return session.config.get(
+            "server_url",
+            DEFAULT_CONFIG["server_url"]
+        ).rstrip("/")
+
+    @classmethod
+    def _url(cls, path: str) -> str:
+        return f"{cls._base_url()}{path}"
 
     @staticmethod
     def _timeout() -> int:
-        return session.config.get("timeout", 10)
+        return session.config.get("timeout", 15)
+
+    # ─────────────────────────────────────
+    # GET
+    # ─────────────────────────────────────
 
     @classmethod
     def _get(cls, path: str, params: dict = None) -> dict:
         try:
-            r = requests.get(cls._url(path), headers=session.headers,
-                             params=params, timeout=cls._timeout())
-            r.raise_for_status()
-            return {"ok": True, "data": r.json()}
+            response = requests.get(
+                cls._url(path),
+                headers=session.headers,
+                params=params,
+                timeout=cls._timeout()
+            )
+
+            response.raise_for_status()
+
+            return {
+                "ok": True,
+                "data": response.json()
+            }
+
         except requests.exceptions.ConnectionError:
-            return {"ok": False, "error": "❌ Connexion impossible au serveur.\nVérifiez votre connexion internet."}
+            return {
+                "ok": False,
+                "error": "❌ Impossible de contacter le serveur."
+            }
+
         except requests.exceptions.Timeout:
-            return {"ok": False, "error": "⏱ Le serveur met trop de temps à répondre."}
-        except requests.exceptions.HTTPError as e:
+            return {
+                "ok": False,
+                "error": "⏱ Le serveur met trop de temps à répondre."
+            }
+
+        except requests.exceptions.HTTPError:
             try:
-                detail = r.json().get("detail", str(e))
+                detail = response.json().get("detail", "Erreur serveur")
             except Exception:
-                detail = str(e)
-            return {"ok": False, "error": detail}
+                detail = "Erreur HTTP"
+
+            return {
+                "ok": False,
+                "error": detail
+            }
+
         except Exception as e:
-            return {"ok": False, "error": str(e)}
+            return {
+                "ok": False,
+                "error": str(e)
+            }
+
+    # ─────────────────────────────────────
+    # POST
+    # ─────────────────────────────────────
 
     @classmethod
     def _post(cls, path: str, data: dict = None, auth: bool = True) -> dict:
         try:
             headers = session.headers if auth else {}
-            r = requests.post(cls._url(path), headers=headers,
-                              json=data, timeout=cls._timeout())
-            r.raise_for_status()
-            return {"ok": True, "data": r.json()}
+
+            response = requests.post(
+                cls._url(path),
+                headers=headers,
+                json=data,
+                timeout=cls._timeout()
+            )
+
+            response.raise_for_status()
+
+            return {
+                "ok": True,
+                "data": response.json()
+            }
+
         except requests.exceptions.ConnectionError:
-            return {"ok": False, "error": "❌ Connexion impossible au serveur.\nVérifiez votre connexion internet."}
+            return {
+                "ok": False,
+                "error": "❌ Impossible de contacter le serveur."
+            }
+
         except requests.exceptions.Timeout:
-            return {"ok": False, "error": "⏱ Le serveur ne répond pas."}
-        except requests.exceptions.HTTPError as e:
+            return {
+                "ok": False,
+                "error": "⏱ Le serveur ne répond pas."
+            }
+
+        except requests.exceptions.HTTPError:
             try:
-                detail = r.json().get("detail", str(e))
+                detail = response.json().get("detail", "Erreur serveur")
             except Exception:
-                detail = str(e)
-            return {"ok": False, "error": detail}
+                detail = "Erreur HTTP"
+
+            return {
+                "ok": False,
+                "error": detail
+            }
+
         except Exception as e:
-            return {"ok": False, "error": str(e)}
+            return {
+                "ok": False,
+                "error": str(e)
+            }
+
+    # ─────────────────────────────────────
+    # PUT
+    # ─────────────────────────────────────
 
     @classmethod
     def _put(cls, path: str, data: dict = None) -> dict:
         try:
-            r = requests.put(cls._url(path), headers=session.headers,
-                             json=data, timeout=cls._timeout())
-            r.raise_for_status()
-            return {"ok": True, "data": r.json()}
-        except requests.exceptions.ConnectionError:
-            return {"ok": False, "error": "❌ Connexion impossible au serveur."}
-        except requests.exceptions.HTTPError as e:
-            try:
-                detail = r.json().get("detail", str(e))
-            except Exception:
-                detail = str(e)
-            return {"ok": False, "error": detail}
+            response = requests.put(
+                cls._url(path),
+                headers=session.headers,
+                json=data,
+                timeout=cls._timeout()
+            )
+
+            response.raise_for_status()
+
+            return {
+                "ok": True,
+                "data": response.json()
+            }
+
         except Exception as e:
-            return {"ok": False, "error": str(e)}
+            return {
+                "ok": False,
+                "error": str(e)
+            }
+
+    # ─────────────────────────────────────
+    # DELETE
+    # ─────────────────────────────────────
 
     @classmethod
     def _delete(cls, path: str) -> dict:
         try:
-            r = requests.delete(cls._url(path), headers=session.headers, timeout=cls._timeout())
-            r.raise_for_status()
-            return {"ok": True, "data": r.json()}
-        except requests.exceptions.HTTPError as e:
-            try:
-                detail = r.json().get("detail", str(e))
-            except Exception:
-                detail = str(e)
-            return {"ok": False, "error": detail}
+            response = requests.delete(
+                cls._url(path),
+                headers=session.headers,
+                timeout=cls._timeout()
+            )
+
+            response.raise_for_status()
+
+            return {
+                "ok": True,
+                "data": response.json()
+            }
+
         except Exception as e:
-            return {"ok": False, "error": str(e)}
+            return {
+                "ok": False,
+                "error": str(e)
+            }
 
-    # ── AUTH ──────────────────────────────
-
-    @classmethod
-    def login(cls, username: str, password: str) -> dict:
-        result = cls._post("/auth/login", {"username": username, "password": password}, auth=False)
-        if result["ok"]:
-            d = result["data"]
-            session.token      = d["token"]
-            session.role       = d["role"]
-            session.nom_complet = d["nom_complet"]
-            session.user_id    = d["id"]
-        return result
+    # ─────────────────────────────────────
+    # TEST CONNEXION
+    # ─────────────────────────────────────
 
     @classmethod
     def test_connection(cls) -> bool:
+        """
+        Vérifie si le serveur Railway répond correctement
+        """
+
         try:
-            r = requests.get(cls._url("/health"), timeout=5)
-            return r.status_code == 200
-        except Exception:
+            url = cls._url("/health")
+
+            print("Test connexion :", url)
+
+            response = requests.get(
+                url,
+                timeout=10
+            )
+
+            print("Status code :", response.status_code)
+            print("Réponse :", response.text)
+
+            return response.status_code == 200
+
+        except Exception as e:
+            print("Erreur connexion serveur :", e)
             return False
 
-    # ── ARTICLES ─────────────────────────
+    # ─────────────────────────────────────
+    # AUTHENTIFICATION
+    # ─────────────────────────────────────
+
+    @classmethod
+    def login(cls, username: str, password: str) -> dict:
+
+        result = cls._post(
+            "/auth/login",
+            {
+                "username": username,
+                "password": password
+            },
+            auth=False
+        )
+
+        if result["ok"]:
+            data = result["data"]
+
+            session.token = data["token"]
+            session.role = data["role"]
+            session.nom_complet = data["nom_complet"]
+            session.user_id = data["id"]
+
+        return result
+
+    # ─────────────────────────────────────
+    # ARTICLES
+    # ─────────────────────────────────────
 
     @classmethod
     def get_articles(cls, q: str = "") -> dict:
@@ -192,24 +333,39 @@ class APIClient:
     def delete_article(cls, article_id: int) -> dict:
         return cls._delete(f"/articles/{article_id}")
 
-    # ── VENTES ───────────────────────────
+    # ─────────────────────────────────────
+    # VENTES
+    # ─────────────────────────────────────
 
     @classmethod
     def create_vente(cls, lignes: list, total: float) -> dict:
-        return cls._post("/ventes", {"lignes": lignes, "total": total})
+        return cls._post(
+            "/ventes",
+            {
+                "lignes": lignes,
+                "total": total
+            }
+        )
 
     @classmethod
     def get_ventes(cls, debut: str = None, fin: str = None) -> dict:
         params = {}
-        if debut: params["debut"] = debut
-        if fin:   params["fin"]   = fin
+
+        if debut:
+            params["debut"] = debut
+
+        if fin:
+            params["fin"] = fin
+
         return cls._get("/ventes", params or None)
 
     @classmethod
     def get_vente_details(cls, vente_id: int) -> dict:
         return cls._get(f"/ventes/{vente_id}/details")
 
-    # ── STATS ────────────────────────────
+    # ─────────────────────────────────────
+    # STATS
+    # ─────────────────────────────────────
 
     @classmethod
     def get_stats(cls) -> dict:
@@ -219,7 +375,9 @@ class APIClient:
     def get_top_articles(cls) -> dict:
         return cls._get("/stats/top_articles")
 
-    # ── UTILISATEURS ─────────────────────
+    # ─────────────────────────────────────
+    # UTILISATEURS
+    # ─────────────────────────────────────
 
     @classmethod
     def get_users(cls) -> dict:
@@ -235,4 +393,7 @@ class APIClient:
 
     @classmethod
     def reset_password(cls, user_id: int, password: str) -> dict:
-        return cls._put(f"/users/{user_id}/password", {"password": password})
+        return cls._put(
+            f"/users/{user_id}/password",
+            {"password": password}
+        )
