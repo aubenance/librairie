@@ -1,7 +1,6 @@
-    fastapi
-    uvicorn[standard]
-    sqlalchemy
-    pydantic
-    requests
-    PyJWT
-    python-multipart
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+sqlalchemy==2.0.30
+pydantic==2.7.1
+PyJWT==2.8.0
+python-multipart==0.0.9
