@@ -18,5 +18,3 @@ echo.
 echo =========================
 echo BUILD TERMINE
 echo =========================
-
-pause
