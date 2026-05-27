@@ -1,9 +1,9 @@
 """
 LibrairieCI Pro - Serveur Backend
-VERSION STABLE RAILWAY
+VERSION FINALE STABLE RAILWAY
 """
 
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
@@ -15,17 +15,13 @@ from sqlalchemy import (
     Float,
     DateTime,
     Boolean,
-    ForeignKey,
-    Text,
-    func,
-    desc
+    Text
 )
 
 from sqlalchemy.orm import (
     declarative_base,
     sessionmaker,
-    Session,
-    relationship
+    Session
 )
 
 from pydantic import BaseModel
@@ -50,13 +46,13 @@ SECRET_KEY = os.environ.get(
 )
 
 ALGORITHM = "HS256"
-TOKEN_EXPIRE_HOURS = 12
 
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
     "sqlite:///./librairie_ci.db"
 )
 
+# PostgreSQL Railway
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace(
         "postgres://",
@@ -85,24 +81,27 @@ SessionLocal = sessionmaker(
 Base = declarative_base()
 
 # ─────────────────────────────────────────
-# BASE DE DONNÉES
+# MODELS
 # ─────────────────────────────────────────
 
 class Utilisateur(Base):
 
     __tablename__ = "utilisateurs"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True)
 
-    nom = Column(String(100), nullable=False)
+    nom = Column(String(100))
 
-    prenom = Column(String(100), nullable=False)
+    prenom = Column(String(100))
 
-    username = Column(String(50), unique=True, nullable=False)
+    username = Column(
+        String(100),
+        unique=True
+    )
 
-    password = Column(String(255), nullable=False)
+    password = Column(String(255))
 
-    role = Column(String(20), default="employe")
+    role = Column(String(20))
 
     actif = Column(Boolean, default=True)
 
@@ -116,29 +115,28 @@ class Article(Base):
 
     __tablename__ = "articles"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True)
 
-    code = Column(String(50), unique=True, nullable=False)
+    code = Column(String(50), unique=True)
 
-    titre = Column(String(255), nullable=False)
+    titre = Column(String(255))
 
-    auteur = Column(String(255), default="")
+    auteur = Column(String(255))
 
-    categorie = Column(String(100), default="")
+    categorie = Column(String(100))
 
-    prix_achat = Column(Float, default=0)
+    prix_achat = Column(Float)
 
-    prix_vente = Column(Float, nullable=False)
+    prix_vente = Column(Float)
 
-    quantite = Column(Integer, default=0)
+    quantite = Column(Integer)
 
-    description = Column(Text, default="")
+    description = Column(Text)
 
     date_ajout = Column(
         DateTime,
         default=datetime.utcnow
     )
-
 
 # Création tables
 Base.metadata.create_all(bind=engine)
@@ -152,33 +150,27 @@ class LoginRequest(BaseModel):
     password: str
 
 
-class TokenResponse(BaseModel):
-    token: str
-    role: str
-    nom_complet: str
-    id: int
-
-
 class ArticleCreate(BaseModel):
+
     code: str
     titre: str
     auteur: Optional[str] = ""
     categorie: Optional[str] = ""
-    prix_achat: Optional[float] = 0
+    prix_achat: float = 0
     prix_vente: float
     quantite: int
     description: Optional[str] = ""
 
 
 class ArticleOut(ArticleCreate):
+
     id: int
 
     class Config:
         from_attributes = True
 
-
 # ─────────────────────────────────────────
-# SÉCURITÉ
+# UTILITAIRES
 # ─────────────────────────────────────────
 
 def hash_password(password: str):
@@ -193,7 +185,7 @@ def create_token(data: dict):
     payload = data.copy()
 
     payload["exp"] = datetime.utcnow() + timedelta(
-        hours=TOKEN_EXPIRE_HOURS
+        hours=12
     )
 
     return jwt.encode(
@@ -241,20 +233,6 @@ def verify_token(
         )
 
 
-def require_admin(
-    payload: dict = Depends(verify_token)
-):
-
-    if payload.get("role") != "admin":
-
-        raise HTTPException(
-            status_code=403,
-            detail="Accès administrateur requis"
-        )
-
-    return payload
-
-
 def get_db():
 
     db = SessionLocal()
@@ -266,7 +244,7 @@ def get_db():
         db.close()
 
 # ─────────────────────────────────────────
-# DONNÉES PAR DÉFAUT
+# DONNÉES INITIALES
 # ─────────────────────────────────────────
 
 def init_data():
@@ -284,42 +262,19 @@ def init_data():
                 prenom="Système",
                 username="admin",
                 password=hash_password("admin123"),
-                role="admin"
+                role="admin",
+                actif=True
             )
 
             db.add(admin)
 
-            db.add_all([
-
-                Article(
-                    code="LIV001",
-                    titre="Notre Dame de Paris",
-                    auteur="Victor Hugo",
-                    categorie="Roman",
-                    prix_achat=1500,
-                    prix_vente=3500,
-                    quantite=20
-                ),
-
-                Article(
-                    code="LIV002",
-                    titre="Le Petit Prince",
-                    auteur="Saint-Exupéry",
-                    categorie="Jeunesse",
-                    prix_achat=1200,
-                    prix_vente=2500,
-                    quantite=15
-                )
-
-            ])
-
             db.commit()
 
-            print("✅ Données initiales créées")
+            print("✅ ADMIN CRÉÉ")
 
     except Exception as e:
 
-        print("❌ Erreur init data :", e)
+        print("❌ INIT ERROR :", e)
 
         db.rollback()
 
@@ -328,7 +283,7 @@ def init_data():
         db.close()
 
 # ─────────────────────────────────────────
-# APPLICATION
+# APP
 # ─────────────────────────────────────────
 
 app = FastAPI(
@@ -347,11 +302,11 @@ app.add_middleware(
 @app.on_event("startup")
 def startup():
 
-    print("🚀 Démarrage serveur LibrairieCI")
+    print("🚀 SERVEUR LIBRAIRIECI")
 
     init_data()
 
-    print("✅ Serveur prêt")
+    print("✅ SERVEUR PRÊT")
 
 # ─────────────────────────────────────────
 # ROUTES SYSTÈME
@@ -361,7 +316,7 @@ def startup():
 def root():
 
     return {
-        "message": "LibrairieCI API ONLINE"
+        "message": "LibrairieCI ONLINE"
     }
 
 
@@ -375,29 +330,29 @@ def health():
     }
 
 # ─────────────────────────────────────────
-# AUTH
+# AUTHENTIFICATION
 # ─────────────────────────────────────────
 
 @app.post("/auth/login")
-def login(
-    data: LoginRequest,
-    db: Session = Depends(get_db)
-):
+async def login(data: dict = Body(...)):
 
     try:
 
-        print("══════════════════════════════")
-        print("LOGIN :", data.username)
+        username = data.get("username")
+        password = data.get("password")
+
+        print("══════════════════════════")
+        print("LOGIN :", username)
+
+        db = SessionLocal()
 
         user = db.query(Utilisateur).filter(
-            Utilisateur.username == data.username,
-            Utilisateur.password == hash_password(data.password),
+            Utilisateur.username == username,
+            Utilisateur.password == hash_password(password),
             Utilisateur.actif == True
         ).first()
 
         if not user:
-
-            print("❌ LOGIN INCORRECT")
 
             raise HTTPException(
                 status_code=401,
@@ -424,13 +379,12 @@ def login(
 
     except Exception as e:
 
-        print("❌ ERREUR LOGIN :", e)
+        print("❌ LOGIN ERROR :", e)
 
         raise HTTPException(
             status_code=500,
             detail=str(e)
         )
-
 
 @app.get("/auth/me")
 def me(
@@ -457,15 +411,11 @@ def get_articles(
 
     if q:
 
-        like = f"%{q}%"
-
         query = query.filter(
-            Article.titre.ilike(like)
+            Article.titre.ilike(f"%{q}%")
         )
 
-    return query.order_by(
-        Article.titre
-    ).all()
+    return query.all()
 
 
 @app.post(
@@ -475,7 +425,7 @@ def get_articles(
 def create_article(
     data: ArticleCreate,
     db: Session = Depends(get_db),
-    payload: dict = Depends(require_admin)
+    payload: dict = Depends(verify_token)
 ):
 
     article = Article(**data.model_dump())
@@ -489,20 +439,16 @@ def create_article(
     return article
 
 # ─────────────────────────────────────────
-# LANCEMENT
+# MAIN
 # ─────────────────────────────────────────
 
 if __name__ == "__main__":
 
     import uvicorn
 
-    port = int(
-        os.environ.get("PORT", 8000)
-    )
-
     uvicorn.run(
         "server:app",
         host="0.0.0.0",
-        port=port,
+        port=int(os.environ.get("PORT", 8080)),
         reload=False
     )
