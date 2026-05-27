@@ -1,103 +1,156 @@
 """
-LibrairieCI Pro - Serveur Backend (VERSION CORRIGÉE)
-Compatible Railway / Render
+LibrairieCI Pro - Serveur Backend
+VERSION STABLE RAILWAY
 """
 
-from fastapi import FastAPI, HTTPException, Depends, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean, ForeignKey, Text, func, desc
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session, relationship
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+from sqlalchemy import (
+    create_engine,
+    Column,
+    Integer,
+    String,
+    Float,
+    DateTime,
+    Boolean,
+    ForeignKey,
+    Text,
+    func,
+    desc
+)
+
+from sqlalchemy.orm import (
+    declarative_base,
+    sessionmaker,
+    Session,
+    relationship
+)
+
 from pydantic import BaseModel
+
 from typing import Optional, List
+
 from datetime import datetime, timedelta
-import jwt          # PyJWT  (pip install PyJWT)
+
+import jwt
+from jwt import ExpiredSignatureError, InvalidTokenError
+
 import hashlib
 import os
 
 # ─────────────────────────────────────────
-#  CONFIGURATION
+# CONFIGURATION
 # ─────────────────────────────────────────
 
-SECRET_KEY          = os.environ.get("SECRET_KEY", "LibrairieCI_SuperSecretKey_2024")
-ALGORITHM           = "HS256"
-TOKEN_EXPIRE_HOURS  = 12
+SECRET_KEY = os.environ.get(
+    "SECRET_KEY",
+    "LibrairieCI_SECRET_2026"
+)
 
-# Base de données : SQLite local OU PostgreSQL sur Railway
-DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./librairie_ci.db")
-if DATABASE_URL.startswith("postgres://"):          # Railway utilise postgres://
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+ALGORITHM = "HS256"
+TOKEN_EXPIRE_HOURS = 12
 
-# Paramètres moteur
-connect_args = {"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
-engine       = create_engine(DATABASE_URL, connect_args=connect_args)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base         = declarative_base()
+DATABASE_URL = os.environ.get(
+    "DATABASE_URL",
+    "sqlite:///./librairie_ci.db"
+)
+
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace(
+        "postgres://",
+        "postgresql://",
+        1
+    )
+
+connect_args = {}
+
+if "sqlite" in DATABASE_URL:
+    connect_args = {
+        "check_same_thread": False
+    }
+
+engine = create_engine(
+    DATABASE_URL,
+    connect_args=connect_args
+)
+
+SessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine
+)
+
+Base = declarative_base()
 
 # ─────────────────────────────────────────
-#  MODÈLES BASE DE DONNÉES
+# BASE DE DONNÉES
 # ─────────────────────────────────────────
 
 class Utilisateur(Base):
+
     __tablename__ = "utilisateurs"
-    id            = Column(Integer, primary_key=True, index=True)
-    nom           = Column(String(100), nullable=False)
-    prenom        = Column(String(100), nullable=False)
-    username      = Column(String(50),  unique=True, nullable=False)
-    password      = Column(String(200), nullable=False)
-    role          = Column(String(20),  default="employe")
-    actif         = Column(Boolean,     default=True)
-    date_creation = Column(DateTime,    default=datetime.utcnow)
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    nom = Column(String(100), nullable=False)
+
+    prenom = Column(String(100), nullable=False)
+
+    username = Column(String(50), unique=True, nullable=False)
+
+    password = Column(String(255), nullable=False)
+
+    role = Column(String(20), default="employe")
+
+    actif = Column(Boolean, default=True)
+
+    date_creation = Column(
+        DateTime,
+        default=datetime.utcnow
+    )
 
 
 class Article(Base):
+
     __tablename__ = "articles"
-    id            = Column(Integer, primary_key=True, index=True)
-    code          = Column(String(50),  unique=True, nullable=False)
-    titre         = Column(String(200), nullable=False)
-    auteur        = Column(String(150), default="")
-    categorie     = Column(String(100), default="")
-    prix_achat    = Column(Float,       default=0)
-    prix_vente    = Column(Float,       nullable=False)
-    quantite      = Column(Integer,     default=0)
-    description   = Column(Text,        default="")
-    date_ajout    = Column(DateTime,    default=datetime.utcnow)
-    modifie_le    = Column(DateTime,    default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    code = Column(String(50), unique=True, nullable=False)
+
+    titre = Column(String(255), nullable=False)
+
+    auteur = Column(String(255), default="")
+
+    categorie = Column(String(100), default="")
+
+    prix_achat = Column(Float, default=0)
+
+    prix_vente = Column(Float, nullable=False)
+
+    quantite = Column(Integer, default=0)
+
+    description = Column(Text, default="")
+
+    date_ajout = Column(
+        DateTime,
+        default=datetime.utcnow
+    )
 
 
-class Vente(Base):
-    __tablename__ = "ventes"
-    id            = Column(Integer, primary_key=True, index=True)
-    numero        = Column(String(50), unique=True)
-    date_vente    = Column(DateTime,   default=datetime.utcnow)
-    id_employe    = Column(Integer,    ForeignKey("utilisateurs.id"))
-    total         = Column(Float,      nullable=False)
-    employe       = relationship("Utilisateur")
-    details       = relationship("DetailVente", back_populates="vente")
-
-
-class DetailVente(Base):
-    __tablename__  = "detail_ventes"
-    id             = Column(Integer, primary_key=True, index=True)
-    id_vente       = Column(Integer, ForeignKey("ventes.id"))
-    id_article     = Column(Integer, ForeignKey("articles.id"))
-    quantite       = Column(Integer, nullable=False)
-    prix_unitaire  = Column(Float,   nullable=False)
-    vente          = relationship("Vente",   back_populates="details")
-    article        = relationship("Article")
-
-
-# Créer toutes les tables
+# Création tables
 Base.metadata.create_all(bind=engine)
 
 # ─────────────────────────────────────────
-#  SCHÉMAS PYDANTIC
+# SCHÉMAS
 # ─────────────────────────────────────────
 
 class LoginRequest(BaseModel):
     username: str
     password: str
+
 
 class TokenResponse(BaseModel):
     token: str
@@ -105,148 +158,182 @@ class TokenResponse(BaseModel):
     nom_complet: str
     id: int
 
+
 class ArticleCreate(BaseModel):
     code: str
     titre: str
-    auteur:      Optional[str]   = ""
-    categorie:   Optional[str]   = ""
-    prix_achat:  Optional[float] = 0
-    prix_vente:  float
-    quantite:    int
-    description: Optional[str]   = ""
+    auteur: Optional[str] = ""
+    categorie: Optional[str] = ""
+    prix_achat: Optional[float] = 0
+    prix_vente: float
+    quantite: int
+    description: Optional[str] = ""
+
 
 class ArticleOut(ArticleCreate):
     id: int
-    modifie_le: Optional[datetime] = None
+
     class Config:
         from_attributes = True
 
-class LigneVenteIn(BaseModel):
-    id_article:   int
-    quantite:     int
-    prix_unitaire: float
-
-class VenteCreate(BaseModel):
-    lignes: List[LigneVenteIn]
-    total:  float
-
-class UtilisateurCreate(BaseModel):
-    nom:      str
-    prenom:   str
-    username: str
-    password: str
-    role:     str = "employe"
-
-class UtilisateurUpdate(BaseModel):
-    nom:    str
-    prenom: str
-    role:   str
-    actif:  bool
-
-class UtilisateurOut(BaseModel):
-    id:       int
-    nom:      str
-    prenom:   str
-    username: str
-    role:     str
-    actif:    bool
-    class Config:
-        from_attributes = True
 
 # ─────────────────────────────────────────
-#  SÉCURITÉ / AUTH
+# SÉCURITÉ
 # ─────────────────────────────────────────
 
-def hash_password(pwd: str) -> str:
-    return hashlib.sha256((pwd + "LibrairieCI_Salt").encode()).hexdigest()
+def hash_password(password: str):
+
+    return hashlib.sha256(
+        (password + "LibrairieCI").encode()
+    ).hexdigest()
 
 
-def create_token(data: dict) -> str:
+def create_token(data: dict):
+
     payload = data.copy()
-    payload["exp"] = datetime.utcnow() + timedelta(hours=TOKEN_EXPIRE_HOURS)
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+    payload["exp"] = datetime.utcnow() + timedelta(
+        hours=TOKEN_EXPIRE_HOURS
+    )
+
+    return jwt.encode(
+        payload,
+        SECRET_KEY,
+        algorithm=ALGORITHM
+    )
 
 
-def verify_token(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())) -> dict:
+def verify_token(
+    credentials: HTTPAuthorizationCredentials = Depends(
+        HTTPBearer()
+    )
+):
+
     try:
-        return jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Session expirée, reconnectez-vous")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Token invalide")
+
+        payload = jwt.decode(
+            credentials.credentials,
+            SECRET_KEY,
+            algorithms=[ALGORITHM]
+        )
+
+        return payload
+
+    except ExpiredSignatureError:
+
+        raise HTTPException(
+            status_code=401,
+            detail="Session expirée"
+        )
+
+    except InvalidTokenError:
+
+        raise HTTPException(
+            status_code=401,
+            detail="Token invalide"
+        )
+
+    except Exception as e:
+
+        raise HTTPException(
+            status_code=401,
+            detail=str(e)
+        )
 
 
-def require_admin(payload: dict = Depends(verify_token)):
+def require_admin(
+    payload: dict = Depends(verify_token)
+):
+
     if payload.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Accès réservé à l'administrateur")
+
+        raise HTTPException(
+            status_code=403,
+            detail="Accès administrateur requis"
+        )
+
     return payload
 
 
 def get_db():
+
     db = SessionLocal()
+
     try:
         yield db
+
     finally:
         db.close()
 
 # ─────────────────────────────────────────
-#  DONNÉES PAR DÉFAUT
+# DONNÉES PAR DÉFAUT
 # ─────────────────────────────────────────
 
 def init_data():
+
     db = SessionLocal()
+
     try:
-        if db.query(Utilisateur).count() == 0:
+
+        count = db.query(Utilisateur).count()
+
+        if count == 0:
+
+            admin = Utilisateur(
+                nom="Admin",
+                prenom="Système",
+                username="admin",
+                password=hash_password("admin123"),
+                role="admin"
+            )
+
+            db.add(admin)
+
             db.add_all([
-                Utilisateur(nom="Admin",  prenom="Système",  username="admin",
-                            password=hash_password("admin123"), role="admin"),
-                Utilisateur(nom="Koné",   prenom="Aminata",  username="employe",
-                            password=hash_password("emp123"),   role="employe"),
+
+                Article(
+                    code="LIV001",
+                    titre="Notre Dame de Paris",
+                    auteur="Victor Hugo",
+                    categorie="Roman",
+                    prix_achat=1500,
+                    prix_vente=3500,
+                    quantite=20
+                ),
+
+                Article(
+                    code="LIV002",
+                    titre="Le Petit Prince",
+                    auteur="Saint-Exupéry",
+                    categorie="Jeunesse",
+                    prix_achat=1200,
+                    prix_vente=2500,
+                    quantite=15
+                )
+
             ])
-            db.add_all([
-                Article(code="LIV001", titre="Notre Dame de Paris",
-                        auteur="Victor Hugo", categorie="Roman",
-                        prix_achat=1500, prix_vente=3500, quantite=25,
-                        description="Classique de la littérature française"),
-                Article(code="LIV002", titre="Le Petit Prince",
-                        auteur="Antoine de Saint-Exupéry", categorie="Jeunesse",
-                        prix_achat=1200, prix_vente=2500, quantite=40,
-                        description="Chef-d'œuvre mondial"),
-                Article(code="LIV003", titre="L'Aventure Ambiguë",
-                        auteur="Cheikh Hamidou Kane", categorie="Roman Africain",
-                        prix_achat=1800, prix_vente=4000, quantite=15,
-                        description="Roman sénégalais incontournable"),
-                Article(code="LIV004", titre="Les Soleils des Indépendances",
-                        auteur="Ahmadou Kourouma", categorie="Roman Africain",
-                        prix_achat=2000, prix_vente=4500, quantite=20,
-                        description="Roman ivoirien de référence"),
-                Article(code="SCO001", titre="Mathématiques Terminale",
-                        auteur="Collectif", categorie="Scolaire",
-                        prix_achat=3000, prix_vente=6000, quantite=30,
-                        description="Programme officiel Côte d'Ivoire"),
-                Article(code="SCO002", titre="Français 3ème",
-                        auteur="Collectif", categorie="Scolaire",
-                        prix_achat=2500, prix_vente=5000, quantite=35,
-                        description="Manuel scolaire"),
-            ])
+
             db.commit()
-            print("✅ Données par défaut créées (admin/admin123, employe/emp123)")
-        else:
-            print(f"✅ Base de données OK ({db.query(Article).count()} articles, {db.query(Utilisateur).count()} utilisateurs)")
+
+            print("✅ Données initiales créées")
+
     except Exception as e:
+
+        print("❌ Erreur init data :", e)
+
         db.rollback()
-        print(f"❌ Erreur init_data: {e}")
+
     finally:
+
         db.close()
 
 # ─────────────────────────────────────────
-#  APPLICATION
+# APPLICATION
 # ─────────────────────────────────────────
 
 app = FastAPI(
     title="LibrairieCI API",
-    version="2.0",
-    description="Backend Gestion de Librairie — Côte d'Ivoire"
+    version="2.0"
 )
 
 app.add_middleware(
@@ -258,236 +345,164 @@ app.add_middleware(
 )
 
 @app.on_event("startup")
-def startup_event():
-    print("🚀 LibrairieCI démarrage...")
+def startup():
+
+    print("🚀 Démarrage serveur LibrairieCI")
+
     init_data()
-    print("🚀 Serveur prêt !")
+
+    print("✅ Serveur prêt")
 
 # ─────────────────────────────────────────
-#  ROUTES — SANTÉ
+# ROUTES SYSTÈME
 # ─────────────────────────────────────────
-
-@app.get("/health")
-def health():
-    return {"status": "ok", "version": "2.0", "app": "LibrairieCI"}
 
 @app.get("/")
 def root():
-    return {"message": "LibrairieCI API v2.0 — Serveur actif ✅"}
+
+    return {
+        "message": "LibrairieCI API ONLINE"
+    }
+
+
+@app.get("/health")
+def health():
+
+    return {
+        "status": "ok",
+        "app": "LibrairieCI",
+        "version": "2.0"
+    }
 
 # ─────────────────────────────────────────
-#  ROUTES — AUTH
+# AUTH
 # ─────────────────────────────────────────
 
-@app.post("/auth/login", response_model=TokenResponse)
-def login(data: LoginRequest, db: Session = Depends(get_db)):
-    user = db.query(Utilisateur).filter(
-        Utilisateur.username == data.username,
-        Utilisateur.password == hash_password(data.password),
-        Utilisateur.actif == True
-    ).first()
-    if not user:
-        raise HTTPException(status_code=401, detail="Identifiant ou mot de passe incorrect")
-    token = create_token({"sub": user.username, "role": user.role, "id": user.id})
-    return {"token": token, "role": user.role,
-            "nom_complet": f"{user.prenom} {user.nom}", "id": user.id}
+@app.post("/auth/login")
+def login(
+    data: LoginRequest,
+    db: Session = Depends(get_db)
+):
+
+    try:
+
+        print("══════════════════════════════")
+        print("LOGIN :", data.username)
+
+        user = db.query(Utilisateur).filter(
+            Utilisateur.username == data.username,
+            Utilisateur.password == hash_password(data.password),
+            Utilisateur.actif == True
+        ).first()
+
+        if not user:
+
+            print("❌ LOGIN INCORRECT")
+
+            raise HTTPException(
+                status_code=401,
+                detail="Identifiants incorrects"
+            )
+
+        token = create_token({
+            "sub": user.username,
+            "role": user.role,
+            "id": user.id
+        })
+
+        print("✅ LOGIN OK")
+
+        return {
+            "token": token,
+            "role": user.role,
+            "nom_complet": f"{user.prenom} {user.nom}",
+            "id": user.id
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+
+        print("❌ ERREUR LOGIN :", e)
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
+
 
 @app.get("/auth/me")
-def me(payload: dict = Depends(verify_token)):
+def me(
+    payload: dict = Depends(verify_token)
+):
+
     return payload
 
 # ─────────────────────────────────────────
-#  ROUTES — ARTICLES
+# ARTICLES
 # ─────────────────────────────────────────
 
-@app.get("/articles", response_model=List[ArticleOut])
-def get_articles(q: Optional[str] = None, db: Session = Depends(get_db),
-                 _: dict = Depends(verify_token)):
+@app.get(
+    "/articles",
+    response_model=List[ArticleOut]
+)
+def get_articles(
+    q: Optional[str] = None,
+    db: Session = Depends(get_db),
+    payload: dict = Depends(verify_token)
+):
+
     query = db.query(Article)
+
     if q:
+
         like = f"%{q}%"
+
         query = query.filter(
-            Article.titre.ilike(like)    | Article.code.ilike(like) |
-            Article.auteur.ilike(like)   | Article.categorie.ilike(like)
+            Article.titre.ilike(like)
         )
-    return query.order_by(Article.titre).all()
 
-@app.get("/articles/{article_id}", response_model=ArticleOut)
-def get_article(article_id: int, db: Session = Depends(get_db),
-                _: dict = Depends(verify_token)):
-    art = db.query(Article).filter(Article.id == article_id).first()
-    if not art:
-        raise HTTPException(404, "Article introuvable")
-    return art
+    return query.order_by(
+        Article.titre
+    ).all()
 
-@app.post("/articles", response_model=ArticleOut, status_code=201)
-def create_article(data: ArticleCreate, db: Session = Depends(get_db),
-                   _: dict = Depends(require_admin)):
-    if db.query(Article).filter(Article.code == data.code).first():
-        raise HTTPException(400, f"Le code '{data.code}' existe déjà")
-    art = Article(**data.model_dump())
-    db.add(art)
-    db.commit()
-    db.refresh(art)
-    return art
 
-@app.put("/articles/{article_id}", response_model=ArticleOut)
-def update_article(article_id: int, data: ArticleCreate, db: Session = Depends(get_db),
-                   _: dict = Depends(require_admin)):
-    art = db.query(Article).filter(Article.id == article_id).first()
-    if not art:
-        raise HTTPException(404, "Article introuvable")
-    if db.query(Article).filter(Article.code == data.code, Article.id != article_id).first():
-        raise HTTPException(400, f"Le code '{data.code}' est déjà utilisé")
-    for k, v in data.model_dump().items():
-        setattr(art, k, v)
-    art.modifie_le = datetime.utcnow()
-    db.commit()
-    db.refresh(art)
-    return art
+@app.post(
+    "/articles",
+    response_model=ArticleOut
+)
+def create_article(
+    data: ArticleCreate,
+    db: Session = Depends(get_db),
+    payload: dict = Depends(require_admin)
+):
 
-@app.delete("/articles/{article_id}")
-def delete_article(article_id: int, db: Session = Depends(get_db),
-                   _: dict = Depends(require_admin)):
-    art = db.query(Article).filter(Article.id == article_id).first()
-    if not art:
-        raise HTTPException(404, "Article introuvable")
-    db.delete(art)
-    db.commit()
-    return {"message": "Article supprimé avec succès"}
+    article = Article(**data.model_dump())
 
-# ─────────────────────────────────────────
-#  ROUTES — VENTES
-# ─────────────────────────────────────────
-
-@app.post("/ventes", status_code=201)
-def create_vente(data: VenteCreate, db: Session = Depends(get_db),
-                 payload: dict = Depends(verify_token)):
-    for ligne in data.lignes:
-        art = db.query(Article).filter(Article.id == ligne.id_article).first()
-        if not art:
-            raise HTTPException(404, f"Article {ligne.id_article} introuvable")
-        if art.quantite < ligne.quantite:
-            raise HTTPException(400, f"Stock insuffisant pour '{art.titre}' (dispo: {art.quantite})")
-
-    numero = f"VTE-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
-    vente  = Vente(numero=numero, id_employe=payload["id"], total=data.total)
-    db.add(vente)
-    db.flush()
-
-    for ligne in data.lignes:
-        db.add(DetailVente(id_vente=vente.id, id_article=ligne.id_article,
-                           quantite=ligne.quantite, prix_unitaire=ligne.prix_unitaire))
-        art = db.query(Article).filter(Article.id == ligne.id_article).first()
-        art.quantite -= ligne.quantite
+    db.add(article)
 
     db.commit()
-    return {"id": vente.id, "numero": numero, "total": data.total}
 
-@app.get("/ventes")
-def get_ventes(debut: Optional[str] = None, fin: Optional[str] = None,
-               db: Session = Depends(get_db), _: dict = Depends(require_admin)):
-    query = db.query(Vente)
-    if debut:
-        query = query.filter(Vente.date_vente >= datetime.fromisoformat(debut))
-    if fin:
-        fin_dt = datetime.fromisoformat(fin).replace(hour=23, minute=59, second=59)
-        query  = query.filter(Vente.date_vente <= fin_dt)
-    return [{
-        "id": v.id, "numero": v.numero,
-        "date_vente": v.date_vente.strftime("%d/%m/%Y %H:%M"),
-        "employe": f"{v.employe.prenom} {v.employe.nom}" if v.employe else "",
-        "total": v.total
-    } for v in query.order_by(Vente.date_vente.desc()).all()]
+    db.refresh(article)
 
-@app.get("/ventes/{vente_id}/details")
-def get_vente_details(vente_id: int, db: Session = Depends(get_db),
-                      _: dict = Depends(verify_token)):
-    return [{
-        "titre":         d.article.titre if d.article else "",
-        "code":          d.article.code  if d.article else "",
-        "quantite":      d.quantite,
-        "prix_unitaire": d.prix_unitaire,
-        "sous_total":    d.quantite * d.prix_unitaire
-    } for d in db.query(DetailVente).filter(DetailVente.id_vente == vente_id).all()]
+    return article
 
 # ─────────────────────────────────────────
-#  ROUTES — STATISTIQUES
-# ─────────────────────────────────────────
-
-@app.get("/stats/dashboard")
-def get_stats(db: Session = Depends(get_db), _: dict = Depends(verify_token)):
-    today = datetime.now().date()
-    vj    = db.query(func.count(Vente.id), func.coalesce(func.sum(Vente.total), 0))\
-              .filter(func.date(Vente.date_vente) == today).first()
-    vm    = db.query(func.count(Vente.id), func.coalesce(func.sum(Vente.total), 0))\
-              .filter(func.extract('month', Vente.date_vente) == today.month,
-                      func.extract('year',  Vente.date_vente) == today.year).first()
-    return {
-        "ventes_jour":    vj[0], "ca_jour":   vj[1],
-        "ventes_mois":    vm[0], "ca_mois":   vm[1],
-        "total_articles": db.query(func.count(Article.id)).scalar(),
-        "stock_faible":   db.query(func.count(Article.id)).filter(Article.quantite <= 5, Article.quantite > 0).scalar(),
-        "rupture":        db.query(func.count(Article.id)).filter(Article.quantite == 0).scalar(),
-    }
-
-@app.get("/stats/top_articles")
-def top_articles(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
-    rows = db.query(
-        Article.titre,
-        func.sum(DetailVente.quantite).label("total_vendu"),
-        func.sum(DetailVente.quantite * DetailVente.prix_unitaire).label("recette")
-    ).join(DetailVente, Article.id == DetailVente.id_article)\
-     .group_by(Article.id)\
-     .order_by(desc("total_vendu")).limit(10).all()
-    return [{"titre": r.titre, "total_vendu": r.total_vendu, "recette": r.recette} for r in rows]
-
-# ─────────────────────────────────────────
-#  ROUTES — UTILISATEURS
-# ─────────────────────────────────────────
-
-@app.get("/users", response_model=List[UtilisateurOut])
-def get_users(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
-    return db.query(Utilisateur).order_by(Utilisateur.nom).all()
-
-@app.post("/users", response_model=UtilisateurOut, status_code=201)
-def create_user(data: UtilisateurCreate, db: Session = Depends(get_db),
-                _: dict = Depends(require_admin)):
-    if db.query(Utilisateur).filter(Utilisateur.username == data.username).first():
-        raise HTTPException(400, f"L'identifiant '{data.username}' existe déjà")
-    u = Utilisateur(nom=data.nom, prenom=data.prenom, username=data.username,
-                    password=hash_password(data.password), role=data.role)
-    db.add(u)
-    db.commit()
-    db.refresh(u)
-    return u
-
-@app.put("/users/{user_id}", response_model=UtilisateurOut)
-def update_user(user_id: int, data: UtilisateurUpdate, db: Session = Depends(get_db),
-                _: dict = Depends(require_admin)):
-    u = db.query(Utilisateur).filter(Utilisateur.id == user_id).first()
-    if not u:
-        raise HTTPException(404, "Utilisateur introuvable")
-    u.nom = data.nom; u.prenom = data.prenom; u.role = data.role; u.actif = data.actif
-    db.commit()
-    db.refresh(u)
-    return u
-
-@app.put("/users/{user_id}/password")
-def reset_password(user_id: int, body: dict, db: Session = Depends(get_db),
-                   _: dict = Depends(require_admin)):
-    u = db.query(Utilisateur).filter(Utilisateur.id == user_id).first()
-    if not u:
-        raise HTTPException(404, "Utilisateur introuvable")
-    u.password = hash_password(body["password"])
-    db.commit()
-    return {"message": "Mot de passe réinitialisé"}
-
-# ─────────────────────────────────────────
-#  LANCEMENT
+# LANCEMENT
 # ─────────────────────────────────────────
 
 if __name__ == "__main__":
+
     import uvicorn
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run("server:app", host="0.0.0.0", port=port, reload=False)
+
+    port = int(
+        os.environ.get("PORT", 8000)
+    )
+
+    uvicorn.run(
+        "server:app",
+        host="0.0.0.0",
+        port=port,
+        reload=False
+    )
