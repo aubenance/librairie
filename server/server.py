@@ -1,88 +1,98 @@
 """
-LibrairieCI - Serveur Backend (FastAPI)
-Hébergeable sur Railway / Render (gratuit)
+LibrairieCI Pro - Serveur Backend (VERSION CORRIGÉE)
+Compatible Railway / Render
 """
 
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean, ForeignKey, Text, func
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean, ForeignKey, Text, func, desc
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime, timedelta
-import jwt
-import hashlib, os, json
+import jwt          # PyJWT  (pip install PyJWT)
+import hashlib
+import os
 
 # ─────────────────────────────────────────
-#  CONFIG
+#  CONFIGURATION
 # ─────────────────────────────────────────
-SECRET_KEY = os.environ.get("SECRET_KEY", "LibrairieCI_SuperSecretKey_2024")
-ALGORITHM  = "HS256"
-TOKEN_EXPIRE_HOURS = 12
 
+SECRET_KEY          = os.environ.get("SECRET_KEY", "LibrairieCI_SuperSecretKey_2024")
+ALGORITHM           = "HS256"
+TOKEN_EXPIRE_HOURS  = 12
+
+# Base de données : SQLite local OU PostgreSQL sur Railway
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./librairie_ci.db")
-if DATABASE_URL.startswith("postgres://"):
+if DATABASE_URL.startswith("postgres://"):          # Railway utilise postgres://
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {})
+# Paramètres moteur
+connect_args = {"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
+engine       = create_engine(DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+Base         = declarative_base()
 
 # ─────────────────────────────────────────
-#  MODÈLES SQLAlchemy
+#  MODÈLES BASE DE DONNÉES
 # ─────────────────────────────────────────
 
 class Utilisateur(Base):
     __tablename__ = "utilisateurs"
-    id         = Column(Integer, primary_key=True, index=True)
-    nom        = Column(String(100), nullable=False)
-    prenom     = Column(String(100), nullable=False)
-    username   = Column(String(50), unique=True, nullable=False)
-    password   = Column(String(200), nullable=False)
-    role       = Column(String(20), default="employe")
-    actif      = Column(Boolean, default=True)
-    date_creation = Column(DateTime, default=datetime.utcnow)
+    id            = Column(Integer, primary_key=True, index=True)
+    nom           = Column(String(100), nullable=False)
+    prenom        = Column(String(100), nullable=False)
+    username      = Column(String(50),  unique=True, nullable=False)
+    password      = Column(String(200), nullable=False)
+    role          = Column(String(20),  default="employe")
+    actif         = Column(Boolean,     default=True)
+    date_creation = Column(DateTime,    default=datetime.utcnow)
+
 
 class Article(Base):
     __tablename__ = "articles"
-    id          = Column(Integer, primary_key=True, index=True)
-    code        = Column(String(50), unique=True, nullable=False)
-    titre       = Column(String(200), nullable=False)
-    auteur      = Column(String(150), default="")
-    categorie   = Column(String(100), default="")
-    prix_achat  = Column(Float, default=0)
-    prix_vente  = Column(Float, nullable=False)
-    quantite    = Column(Integer, default=0)
-    description = Column(Text, default="")
-    date_ajout  = Column(DateTime, default=datetime.utcnow)
-    modifie_le  = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    id            = Column(Integer, primary_key=True, index=True)
+    code          = Column(String(50),  unique=True, nullable=False)
+    titre         = Column(String(200), nullable=False)
+    auteur        = Column(String(150), default="")
+    categorie     = Column(String(100), default="")
+    prix_achat    = Column(Float,       default=0)
+    prix_vente    = Column(Float,       nullable=False)
+    quantite      = Column(Integer,     default=0)
+    description   = Column(Text,        default="")
+    date_ajout    = Column(DateTime,    default=datetime.utcnow)
+    modifie_le    = Column(DateTime,    default=datetime.utcnow, onupdate=datetime.utcnow)
+
 
 class Vente(Base):
     __tablename__ = "ventes"
-    id          = Column(Integer, primary_key=True, index=True)
-    numero      = Column(String(50), unique=True)
-    date_vente  = Column(DateTime, default=datetime.utcnow)
-    id_employe  = Column(Integer, ForeignKey("utilisateurs.id"))
-    total       = Column(Float, nullable=False)
-    employe     = relationship("Utilisateur")
-    details     = relationship("DetailVente", back_populates="vente")
+    id            = Column(Integer, primary_key=True, index=True)
+    numero        = Column(String(50), unique=True)
+    date_vente    = Column(DateTime,   default=datetime.utcnow)
+    id_employe    = Column(Integer,    ForeignKey("utilisateurs.id"))
+    total         = Column(Float,      nullable=False)
+    employe       = relationship("Utilisateur")
+    details       = relationship("DetailVente", back_populates="vente")
+
 
 class DetailVente(Base):
-    __tablename__ = "detail_ventes"
-    id            = Column(Integer, primary_key=True, index=True)
-    id_vente      = Column(Integer, ForeignKey("ventes.id"))
-    id_article    = Column(Integer, ForeignKey("articles.id"))
-    quantite      = Column(Integer, nullable=False)
-    prix_unitaire = Column(Float, nullable=False)
-    vente         = relationship("Vente", back_populates="details")
-    article       = relationship("Article")
+    __tablename__  = "detail_ventes"
+    id             = Column(Integer, primary_key=True, index=True)
+    id_vente       = Column(Integer, ForeignKey("ventes.id"))
+    id_article     = Column(Integer, ForeignKey("articles.id"))
+    quantite       = Column(Integer, nullable=False)
+    prix_unitaire  = Column(Float,   nullable=False)
+    vente          = relationship("Vente",   back_populates="details")
+    article        = relationship("Article")
 
+
+# Créer toutes les tables
 Base.metadata.create_all(bind=engine)
 
 # ─────────────────────────────────────────
-#  SCHEMAS Pydantic
+#  SCHÉMAS PYDANTIC
 # ─────────────────────────────────────────
 
 class LoginRequest(BaseModel):
@@ -98,73 +108,79 @@ class TokenResponse(BaseModel):
 class ArticleCreate(BaseModel):
     code: str
     titre: str
-    auteur: Optional[str] = ""
-    categorie: Optional[str] = ""
-    prix_achat: Optional[float] = 0
-    prix_vente: float
-    quantite: int
-    description: Optional[str] = ""
+    auteur:      Optional[str]   = ""
+    categorie:   Optional[str]   = ""
+    prix_achat:  Optional[float] = 0
+    prix_vente:  float
+    quantite:    int
+    description: Optional[str]   = ""
 
 class ArticleOut(ArticleCreate):
     id: int
     modifie_le: Optional[datetime] = None
-    class Config: from_attributes = True
+    class Config:
+        from_attributes = True
 
 class LigneVenteIn(BaseModel):
-    id_article: int
-    quantite: int
+    id_article:   int
+    quantite:     int
     prix_unitaire: float
 
 class VenteCreate(BaseModel):
     lignes: List[LigneVenteIn]
-    total: float
+    total:  float
 
 class UtilisateurCreate(BaseModel):
-    nom: str
-    prenom: str
+    nom:      str
+    prenom:   str
     username: str
     password: str
-    role: str = "employe"
+    role:     str = "employe"
 
 class UtilisateurUpdate(BaseModel):
-    nom: str
+    nom:    str
     prenom: str
-    role: str
-    actif: bool
+    role:   str
+    actif:  bool
 
 class UtilisateurOut(BaseModel):
-    id: int
-    nom: str
-    prenom: str
+    id:       int
+    nom:      str
+    prenom:   str
     username: str
-    role: str
-    actif: bool
-    class Config: from_attributes = True
+    role:     str
+    actif:    bool
+    class Config:
+        from_attributes = True
 
 # ─────────────────────────────────────────
-#  AUTH
+#  SÉCURITÉ / AUTH
 # ─────────────────────────────────────────
 
 def hash_password(pwd: str) -> str:
     return hashlib.sha256((pwd + "LibrairieCI_Salt").encode()).hexdigest()
+
 
 def create_token(data: dict) -> str:
     payload = data.copy()
     payload["exp"] = datetime.utcnow() + timedelta(hours=TOKEN_EXPIRE_HOURS)
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
+
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())) -> dict:
     try:
         return jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expiré, reconnectez-vous")
-    except Exception:
+        raise HTTPException(status_code=401, detail="Session expirée, reconnectez-vous")
+    except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Token invalide")
+
 
 def require_admin(payload: dict = Depends(verify_token)):
     if payload.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Accès réservé à l'administrateur")
     return payload
+
 
 def get_db():
     db = SessionLocal()
@@ -181,38 +197,57 @@ def init_data():
     db = SessionLocal()
     try:
         if db.query(Utilisateur).count() == 0:
-            users = [
-                Utilisateur(nom="Admin", prenom="Système", username="admin",
+            db.add_all([
+                Utilisateur(nom="Admin",  prenom="Système",  username="admin",
                             password=hash_password("admin123"), role="admin"),
-                Utilisateur(nom="Koné", prenom="Aminata", username="employe",
-                            password=hash_password("emp123"), role="employe"),
-            ]
-            db.add_all(users)
-
-            articles = [
-                Article(code="LIV001", titre="Notre Dame de Paris", auteur="Victor Hugo",
-                        categorie="Roman", prix_achat=1500, prix_vente=3500, quantite=25),
-                Article(code="LIV002", titre="Le Petit Prince", auteur="Antoine de Saint-Exupéry",
-                        categorie="Jeunesse", prix_achat=1200, prix_vente=2500, quantite=40),
-                Article(code="LIV003", titre="L'Aventure Ambiguë", auteur="Cheikh Hamidou Kane",
-                        categorie="Roman Africain", prix_achat=1800, prix_vente=4000, quantite=15),
-                Article(code="LIV004", titre="Les Soleils des Indépendances", auteur="Ahmadou Kourouma",
-                        categorie="Roman Africain", prix_achat=2000, prix_vente=4500, quantite=20),
-                Article(code="SCO001", titre="Mathématiques Terminale", auteur="Collectif",
-                        categorie="Scolaire", prix_achat=3000, prix_vente=6000, quantite=30),
-                Article(code="SCO002", titre="Français 3ème", auteur="Collectif",
-                        categorie="Scolaire", prix_achat=2500, prix_vente=5000, quantite=35),
-            ]
-            db.add_all(articles)
+                Utilisateur(nom="Koné",   prenom="Aminata",  username="employe",
+                            password=hash_password("emp123"),   role="employe"),
+            ])
+            db.add_all([
+                Article(code="LIV001", titre="Notre Dame de Paris",
+                        auteur="Victor Hugo", categorie="Roman",
+                        prix_achat=1500, prix_vente=3500, quantite=25,
+                        description="Classique de la littérature française"),
+                Article(code="LIV002", titre="Le Petit Prince",
+                        auteur="Antoine de Saint-Exupéry", categorie="Jeunesse",
+                        prix_achat=1200, prix_vente=2500, quantite=40,
+                        description="Chef-d'œuvre mondial"),
+                Article(code="LIV003", titre="L'Aventure Ambiguë",
+                        auteur="Cheikh Hamidou Kane", categorie="Roman Africain",
+                        prix_achat=1800, prix_vente=4000, quantite=15,
+                        description="Roman sénégalais incontournable"),
+                Article(code="LIV004", titre="Les Soleils des Indépendances",
+                        auteur="Ahmadou Kourouma", categorie="Roman Africain",
+                        prix_achat=2000, prix_vente=4500, quantite=20,
+                        description="Roman ivoirien de référence"),
+                Article(code="SCO001", titre="Mathématiques Terminale",
+                        auteur="Collectif", categorie="Scolaire",
+                        prix_achat=3000, prix_vente=6000, quantite=30,
+                        description="Programme officiel Côte d'Ivoire"),
+                Article(code="SCO002", titre="Français 3ème",
+                        auteur="Collectif", categorie="Scolaire",
+                        prix_achat=2500, prix_vente=5000, quantite=35,
+                        description="Manuel scolaire"),
+            ])
             db.commit()
+            print("✅ Données par défaut créées (admin/admin123, employe/emp123)")
+        else:
+            print(f"✅ Base de données OK ({db.query(Article).count()} articles, {db.query(Utilisateur).count()} utilisateurs)")
+    except Exception as e:
+        db.rollback()
+        print(f"❌ Erreur init_data: {e}")
     finally:
         db.close()
 
 # ─────────────────────────────────────────
-#  APPLICATION FastAPI
+#  APPLICATION
 # ─────────────────────────────────────────
 
-app = FastAPI(title="LibrairieCI API", version="2.0", description="Backend Gestion Librairie CI")
+app = FastAPI(
+    title="LibrairieCI API",
+    version="2.0",
+    description="Backend Gestion de Librairie — Côte d'Ivoire"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -223,10 +258,26 @@ app.add_middleware(
 )
 
 @app.on_event("startup")
-def startup():
+def startup_event():
+    print("🚀 LibrairieCI démarrage...")
     init_data()
+    print("🚀 Serveur prêt !")
 
-# ── AUTH ──────────────────────────────────
+# ─────────────────────────────────────────
+#  ROUTES — SANTÉ
+# ─────────────────────────────────────────
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "version": "2.0", "app": "LibrairieCI"}
+
+@app.get("/")
+def root():
+    return {"message": "LibrairieCI API v2.0 — Serveur actif ✅"}
+
+# ─────────────────────────────────────────
+#  ROUTES — AUTH
+# ─────────────────────────────────────────
 
 @app.post("/auth/login", response_model=TokenResponse)
 def login(data: LoginRequest, db: Session = Depends(get_db)):
@@ -238,13 +289,16 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=401, detail="Identifiant ou mot de passe incorrect")
     token = create_token({"sub": user.username, "role": user.role, "id": user.id})
-    return {"token": token, "role": user.role, "nom_complet": f"{user.prenom} {user.nom}", "id": user.id}
+    return {"token": token, "role": user.role,
+            "nom_complet": f"{user.prenom} {user.nom}", "id": user.id}
 
 @app.get("/auth/me")
 def me(payload: dict = Depends(verify_token)):
     return payload
 
-# ── ARTICLES ─────────────────────────────
+# ─────────────────────────────────────────
+#  ROUTES — ARTICLES
+# ─────────────────────────────────────────
 
 @app.get("/articles", response_model=List[ArticleOut])
 def get_articles(q: Optional[str] = None, db: Session = Depends(get_db),
@@ -253,13 +307,14 @@ def get_articles(q: Optional[str] = None, db: Session = Depends(get_db),
     if q:
         like = f"%{q}%"
         query = query.filter(
-            Article.titre.ilike(like) | Article.code.ilike(like) |
-            Article.auteur.ilike(like) | Article.categorie.ilike(like)
+            Article.titre.ilike(like)    | Article.code.ilike(like) |
+            Article.auteur.ilike(like)   | Article.categorie.ilike(like)
         )
     return query.order_by(Article.titre).all()
 
 @app.get("/articles/{article_id}", response_model=ArticleOut)
-def get_article(article_id: int, db: Session = Depends(get_db), _: dict = Depends(verify_token)):
+def get_article(article_id: int, db: Session = Depends(get_db),
+                _: dict = Depends(verify_token)):
     art = db.query(Article).filter(Article.id == article_id).first()
     if not art:
         raise HTTPException(404, "Article introuvable")
@@ -282,8 +337,7 @@ def update_article(article_id: int, data: ArticleCreate, db: Session = Depends(g
     art = db.query(Article).filter(Article.id == article_id).first()
     if not art:
         raise HTTPException(404, "Article introuvable")
-    existing = db.query(Article).filter(Article.code == data.code, Article.id != article_id).first()
-    if existing:
+    if db.query(Article).filter(Article.code == data.code, Article.id != article_id).first():
         raise HTTPException(400, f"Le code '{data.code}' est déjà utilisé")
     for k, v in data.model_dump().items():
         setattr(art, k, v)
@@ -300,14 +354,15 @@ def delete_article(article_id: int, db: Session = Depends(get_db),
         raise HTTPException(404, "Article introuvable")
     db.delete(art)
     db.commit()
-    return {"message": "Article supprimé"}
+    return {"message": "Article supprimé avec succès"}
 
-# ── VENTES ───────────────────────────────
+# ─────────────────────────────────────────
+#  ROUTES — VENTES
+# ─────────────────────────────────────────
 
 @app.post("/ventes", status_code=201)
 def create_vente(data: VenteCreate, db: Session = Depends(get_db),
                  payload: dict = Depends(verify_token)):
-    # Vérifier le stock
     for ligne in data.lignes:
         art = db.query(Article).filter(Article.id == ligne.id_article).first()
         if not art:
@@ -316,14 +371,13 @@ def create_vente(data: VenteCreate, db: Session = Depends(get_db),
             raise HTTPException(400, f"Stock insuffisant pour '{art.titre}' (dispo: {art.quantite})")
 
     numero = f"VTE-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
-    vente = Vente(numero=numero, id_employe=payload["id"], total=data.total)
+    vente  = Vente(numero=numero, id_employe=payload["id"], total=data.total)
     db.add(vente)
     db.flush()
 
     for ligne in data.lignes:
-        dv = DetailVente(id_vente=vente.id, id_article=ligne.id_article,
-                         quantite=ligne.quantite, prix_unitaire=ligne.prix_unitaire)
-        db.add(dv)
+        db.add(DetailVente(id_vente=vente.id, id_article=ligne.id_article,
+                           quantite=ligne.quantite, prix_unitaire=ligne.prix_unitaire))
         art = db.query(Article).filter(Article.id == ligne.id_article).first()
         art.quantite -= ligne.quantite
 
@@ -338,52 +392,47 @@ def get_ventes(debut: Optional[str] = None, fin: Optional[str] = None,
         query = query.filter(Vente.date_vente >= datetime.fromisoformat(debut))
     if fin:
         fin_dt = datetime.fromisoformat(fin).replace(hour=23, minute=59, second=59)
-        query = query.filter(Vente.date_vente <= fin_dt)
-    ventes = query.order_by(Vente.date_vente.desc()).all()
-    result = []
-    for v in ventes:
-        result.append({
-            "id": v.id, "numero": v.numero,
-            "date_vente": v.date_vente.strftime("%d/%m/%Y %H:%M"),
-            "employe": f"{v.employe.prenom} {v.employe.nom}" if v.employe else "",
-            "total": v.total
-        })
-    return result
+        query  = query.filter(Vente.date_vente <= fin_dt)
+    return [{
+        "id": v.id, "numero": v.numero,
+        "date_vente": v.date_vente.strftime("%d/%m/%Y %H:%M"),
+        "employe": f"{v.employe.prenom} {v.employe.nom}" if v.employe else "",
+        "total": v.total
+    } for v in query.order_by(Vente.date_vente.desc()).all()]
 
 @app.get("/ventes/{vente_id}/details")
 def get_vente_details(vente_id: int, db: Session = Depends(get_db),
                       _: dict = Depends(verify_token)):
-    details = db.query(DetailVente).filter(DetailVente.id_vente == vente_id).all()
     return [{
-        "titre": d.article.titre if d.article else "",
-        "code":  d.article.code  if d.article else "",
-        "quantite": d.quantite,
+        "titre":         d.article.titre if d.article else "",
+        "code":          d.article.code  if d.article else "",
+        "quantite":      d.quantite,
         "prix_unitaire": d.prix_unitaire,
-        "sous_total": d.quantite * d.prix_unitaire
-    } for d in details]
+        "sous_total":    d.quantite * d.prix_unitaire
+    } for d in db.query(DetailVente).filter(DetailVente.id_vente == vente_id).all()]
 
-# ── STATS ─────────────────────────────────
+# ─────────────────────────────────────────
+#  ROUTES — STATISTIQUES
+# ─────────────────────────────────────────
 
 @app.get("/stats/dashboard")
 def get_stats(db: Session = Depends(get_db), _: dict = Depends(verify_token)):
     today = datetime.now().date()
-    ventes_jour = db.query(func.count(Vente.id), func.coalesce(func.sum(Vente.total), 0))\
-                    .filter(func.date(Vente.date_vente) == today).first()
-    ventes_mois = db.query(func.count(Vente.id), func.coalesce(func.sum(Vente.total), 0))\
-                    .filter(func.extract('month', Vente.date_vente) == today.month,
-                            func.extract('year', Vente.date_vente) == today.year).first()
-    total_articles = db.query(func.count(Article.id)).scalar()
-    stock_faible   = db.query(func.count(Article.id)).filter(Article.quantite <= 5).scalar()
-    rupture        = db.query(func.count(Article.id)).filter(Article.quantite == 0).scalar()
+    vj    = db.query(func.count(Vente.id), func.coalesce(func.sum(Vente.total), 0))\
+              .filter(func.date(Vente.date_vente) == today).first()
+    vm    = db.query(func.count(Vente.id), func.coalesce(func.sum(Vente.total), 0))\
+              .filter(func.extract('month', Vente.date_vente) == today.month,
+                      func.extract('year',  Vente.date_vente) == today.year).first()
     return {
-        "ventes_jour": ventes_jour[0], "ca_jour": ventes_jour[1],
-        "ventes_mois": ventes_mois[0], "ca_mois": ventes_mois[1],
-        "total_articles": total_articles, "stock_faible": stock_faible, "rupture": rupture
+        "ventes_jour":    vj[0], "ca_jour":   vj[1],
+        "ventes_mois":    vm[0], "ca_mois":   vm[1],
+        "total_articles": db.query(func.count(Article.id)).scalar(),
+        "stock_faible":   db.query(func.count(Article.id)).filter(Article.quantite <= 5, Article.quantite > 0).scalar(),
+        "rupture":        db.query(func.count(Article.id)).filter(Article.quantite == 0).scalar(),
     }
 
 @app.get("/stats/top_articles")
 def top_articles(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
-    from sqlalchemy import desc
     rows = db.query(
         Article.titre,
         func.sum(DetailVente.quantite).label("total_vendu"),
@@ -393,7 +442,9 @@ def top_articles(db: Session = Depends(get_db), _: dict = Depends(require_admin)
      .order_by(desc("total_vendu")).limit(10).all()
     return [{"titre": r.titre, "total_vendu": r.total_vendu, "recette": r.recette} for r in rows]
 
-# ── UTILISATEURS ─────────────────────────
+# ─────────────────────────────────────────
+#  ROUTES — UTILISATEURS
+# ─────────────────────────────────────────
 
 @app.get("/users", response_model=List[UtilisateurOut])
 def get_users(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
@@ -417,9 +468,9 @@ def update_user(user_id: int, data: UtilisateurUpdate, db: Session = Depends(get
     u = db.query(Utilisateur).filter(Utilisateur.id == user_id).first()
     if not u:
         raise HTTPException(404, "Utilisateur introuvable")
-    u.nom = data.nom; u.prenom = data.prenom
-    u.role = data.role; u.actif = data.actif
-    db.commit(); db.refresh(u)
+    u.nom = data.nom; u.prenom = data.prenom; u.role = data.role; u.actif = data.actif
+    db.commit()
+    db.refresh(u)
     return u
 
 @app.put("/users/{user_id}/password")
@@ -432,9 +483,9 @@ def reset_password(user_id: int, body: dict, db: Session = Depends(get_db),
     db.commit()
     return {"message": "Mot de passe réinitialisé"}
 
-@app.get("/health")
-def health():
-    return {"status": "ok", "version": "2.0", "app": "LibrairieCI"}
+# ─────────────────────────────────────────
+#  LANCEMENT
+# ─────────────────────────────────────────
 
 if __name__ == "__main__":
     import uvicorn
