@@ -4,9 +4,12 @@ Gère toutes les communications avec le serveur
 """
 
 import requests
+import urllib3
 import json
 import os
-from typing import Optional
+
+# Désactiver les warnings SSL Windows/Railway
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ─────────────────────────────────────────
 # CONFIG
@@ -109,7 +112,8 @@ class APIClient:
                 cls._url(path),
                 headers=session.headers,
                 params=params,
-                timeout=cls._timeout()
+                timeout=cls._timeout(),
+                verify=False
             )
 
             response.raise_for_status()
@@ -161,7 +165,8 @@ class APIClient:
                 cls._url(path),
                 headers=headers,
                 json=data,
-                timeout=cls._timeout()
+                timeout=cls._timeout(),
+                verify=False
             )
 
             response.raise_for_status()
@@ -211,7 +216,8 @@ class APIClient:
                 cls._url(path),
                 headers=session.headers,
                 json=data,
-                timeout=cls._timeout()
+                timeout=cls._timeout(),
+                verify=False
             )
 
             response.raise_for_status()
@@ -237,7 +243,8 @@ class APIClient:
             response = requests.delete(
                 cls._url(path),
                 headers=session.headers,
-                timeout=cls._timeout()
+                timeout=cls._timeout(),
+                verify=False
             )
 
             response.raise_for_status()
@@ -266,20 +273,23 @@ class APIClient:
         try:
             url = cls._url("/health")
 
-            print("Test connexion :", url)
+            print("══════════════════════════════")
+            print("TEST CONNEXION SERVEUR")
+            print("URL :", url)
 
             response = requests.get(
                 url,
-                timeout=10
+                timeout=10,
+                verify=False
             )
 
-            print("Status code :", response.status_code)
-            print("Réponse :", response.text)
+            print("STATUS :", response.status_code)
+            print("REPONSE :", response.text)
 
             return response.status_code == 200
 
         except Exception as e:
-            print("Erreur connexion serveur :", e)
+            print("ERREUR SERVEUR :", e)
             return False
 
     # ─────────────────────────────────────
