@@ -13,6 +13,7 @@ class UsersFrame(ctk.CTkFrame):
 
     def __init__(self, parent):
         super().__init__(parent, fg_color=GRIS_CLAIR)
+        self.pack(fill="both", expand=True)
         self._users = []
         self._selected_id = None
         self._mode = None

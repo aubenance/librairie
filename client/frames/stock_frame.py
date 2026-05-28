@@ -13,6 +13,7 @@ class StockFrame(ctk.CTkFrame):
 
     def __init__(self, parent):
         super().__init__(parent, fg_color=GRIS_CLAIR)
+        self.pack(fill="both", expand=True)
         self._articles = []
         self._build()
         self._load()

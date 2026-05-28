@@ -15,6 +15,7 @@ class VenteFrame(ctk.CTkFrame):
 
     def __init__(self, parent):
         super().__init__(parent, fg_color=GRIS_CLAIR)
+        self.pack(fill="both", expand=True)
         self._articles = []
         self._panier   = []   # list of dicts
         self._build()
@@ -28,6 +29,7 @@ class VenteFrame(ctk.CTkFrame):
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=0)
         self.grid_rowconfigure(1, weight=1)
+        self.pack_propagate(False)
 
         # ── En-tête ──
         header = ctk.CTkFrame(self, fg_color=BLANC, corner_radius=0, height=65)
