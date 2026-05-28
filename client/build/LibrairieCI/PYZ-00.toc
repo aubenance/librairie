@@ -786,10 +786,6 @@
    'C:\\Users\\AC '
    'PRSEP\\Desktop\\LibrairieCI_Pro\\client\\frames\\dashboard_frame.py',
    'PYMODULE'),
-  ('frames.login_frame',
-   'C:\\Users\\AC '
-   'PRSEP\\Desktop\\LibrairieCI_Pro\\client\\frames\\login_frame.py',
-   'PYMODULE'),
   ('frames.rapports_frame',
    'C:\\Users\\AC '
    'PRSEP\\Desktop\\LibrairieCI_Pro\\client\\frames\\rapports_frame.py',

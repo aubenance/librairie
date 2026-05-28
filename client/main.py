@@ -155,22 +155,22 @@ class LibrairieApp(ctk.CTk):
         self.clear_content()
 
         if page == "dashboard":
-            frame = DashboardFrame(self.content_frame)
-
+          frame = DashboardFrame(  self.content_frame, self.show_frame)
+   
         elif page == "vente":
-            frame = VenteFrame(self.content_frame)
+            frame = VenteFrame(self.content_frame,self.show_frame)
 
         elif page == "stock":
-            frame = StockFrame(self.content_frame)
+            frame = StockFrame(self.content_frame,self.show_frame)
 
         elif page == "articles":
-            frame = ArticlesFrame(self.content_frame)
+            frame = ArticlesFrame(self.content_frame,self.show_frame)
 
         elif page == "rapports":
-            frame = RapportsFrame(self.content_frame)
+            frame = RapportsFrame(self.content_frame,self.show_frame)
 
         elif page == "users":
-            frame = UsersFrame(self.content_frame)
+            frame = UsersFrame(self.content_frame,self.show_frame)
 
         else:
             return
