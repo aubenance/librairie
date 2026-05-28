@@ -1,295 +1,210 @@
-"""
-LibrairieCI - Gestion des Articles (Admin)
-"""
-
 import customtkinter as ctk
-import tkinter as tk
 from tkinter import ttk, messagebox
 from theme import *
-from api_client import APIClient, session
-import threading
+from api_client import APIClient
 
 
 class ArticlesFrame(ctk.CTkFrame):
 
     def __init__(self, parent):
         super().__init__(parent, fg_color=GRIS_CLAIR)
-        self._articles = []
-        self._sel_id   = None
-        self._mode     = None   # "add" | "edit"
-        self._build()
-        self.load_articles()
 
-    # ──────────────────────────────────────
-    #  CONSTRUCTION UI
-    # ──────────────────────────────────────
-
-    def _build(self):
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
 
-        # En-tête
-        hdr = ctk.CTkFrame(self, fg_color=BLANC, corner_radius=0, height=64)
-        hdr.grid(row=0, column=0, sticky="ew")
-        hdr.grid_propagate(False)
-        hdr.grid_columnconfigure(1, weight=1)
-
-        ctk.CTkLabel(hdr, text="  Gestion des Articles",
-                     font=ctk.CTkFont(size=18, weight="bold"),
-                     text_color=NOIR_TEXTE).grid(row=0, column=0, padx=16, pady=14, sticky="w")
-
-        btn_row = ctk.CTkFrame(hdr, fg_color=BLANC)
-        btn_row.grid(row=0, column=2, padx=16, pady=10)
-
-        make_button(btn_row, "+ Nouvel Article", self._open_add, width=150).pack(side="left", padx=4)
-        make_button(btn_row, "Modifier", self._open_edit,
-                    color=BLEU, hover="#0D47A1", width=110).pack(side="left", padx=4)
-        make_button(btn_row, "Supprimer", self._delete,
-                    color=ROUGE, hover="#B71C1C", width=110).pack(side="left", padx=4)
-        make_button(btn_row, "Actualiser", self.load_articles,
-                    color="#546E7A", hover="#37474F", width=110).pack(side="left", padx=4)
-
-        ctk.CTkFrame(self, fg_color=GRIS, height=1).grid(row=0, column=0, sticky="ews")
-
-        # Zone principale : liste + formulaire côte à côte
-        main = ctk.CTkFrame(self, fg_color=GRIS_CLAIR)
-        main.grid(row=1, column=0, sticky="nsew", padx=16, pady=12)
-        main.grid_columnconfigure(0, weight=1)
-        main.grid_rowconfigure(1, weight=1)
-
-        # Barre de recherche
-        search_row = ctk.CTkFrame(main, fg_color=GRIS_CLAIR)
-        search_row.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0,8))
-
-        self.entry_search = make_entry(search_row, "Rechercher par titre, code, auteur, categorie...", width=340)
-        self.entry_search.pack(side="left", padx=(0,8))
-        self.entry_search.bind("<Return>", lambda e: self.load_articles(self.entry_search.get()))
-        make_button(search_row, "Rechercher",
-                    lambda: self.load_articles(self.entry_search.get()), width=120).pack(side="left")
-        make_button(search_row, "Tout afficher", lambda: self._reset_search(),
-                    color="#546E7A", hover="#37474F", width=120).pack(side="left", padx=8)
-
-        self.lbl_count = ctk.CTkLabel(search_row, text="", font=ctk.CTkFont(size=12),
-                                       text_color=GRIS_TEXTE)
-        self.lbl_count.pack(side="left", padx=12)
-
-        # Treeview
-        tree_frame = ctk.CTkFrame(main, fg_color=BLANC, corner_radius=10)
-        tree_frame.grid(row=1, column=0, sticky="nsew")
-        main.grid_columnconfigure(0, weight=1)
-        main.grid_rowconfigure(1, weight=1)
-
-        cols = ("id","code","titre","auteur","categorie","prix_vente","quantite")
-        self.tree, vsb = make_treeview(tree_frame, cols, {
-            "id":10,"code":90,"titre":240,"auteur":150,"categorie":120,
-            "prix_vente":130,"quantite":80
-        })
-        self.tree.heading("id",        text="ID")
-        self.tree.heading("code",      text="Code")
-        self.tree.heading("titre",     text="Titre / Nom")
-        self.tree.heading("auteur",    text="Auteur")
-        self.tree.heading("categorie", text="Catégorie")
-        self.tree.heading("prix_vente",text="Prix Vente (FCFA)")
-        self.tree.heading("quantite",  text="Stock")
-        self.tree.column("id", width=0, minwidth=0, stretch=False)
-        self.tree.column("prix_vente", anchor="e")
-        self.tree.column("quantite",   anchor="center")
-
-        self.tree.pack(side="left", fill="both", expand=True, padx=8, pady=8)
-        vsb.pack(side="right", fill="y", pady=8)
-        self.tree.bind("<<TreeviewSelect>>", self._on_select)
-        self.tree.bind("<Double-1>", lambda e: self._open_edit())
-
-        # ── Panneau formulaire (droite, caché par défaut) ──
-        self.form_panel = ctk.CTkFrame(main, fg_color=BLANC, corner_radius=10, width=320)
-        self.form_panel.grid(row=1, column=1, sticky="nsew", padx=(10,0))
-        self.form_panel.grid_remove()
-        self.form_panel.grid_propagate(False)
-        main.grid_columnconfigure(1, minsize=0)
-        self._build_form()
-
-    def _build_form(self):
-        p = self.form_panel
-        p.grid_columnconfigure(0, weight=1)
-
-        self.lbl_form_title = ctk.CTkLabel(p, text="Nouvel Article",
-                                            font=ctk.CTkFont(size=15, weight="bold"),
-                                            text_color=VERT)
-        self.lbl_form_title.grid(row=0, column=0, pady=(16,12), padx=18, sticky="w")
-
-        fields = [
-            ("Code article *",      "entry_code"),
-            ("Titre / Nom *",       "entry_titre"),
-            ("Auteur / Editeur",    "entry_auteur"),
-            ("Categorie",           "entry_cat"),
-            ("Prix d'achat (FCFA)", "entry_pa"),
-            ("Prix de vente *",     "entry_pv"),
-            ("Quantite en stock *", "entry_qte"),
-        ]
-        for i, (label, attr) in enumerate(fields):
-            ctk.CTkLabel(p, text=label, font=ctk.CTkFont(size=11, weight="bold"),
-                         text_color=GRIS_TEXTE).grid(row=i*2+1, column=0,
-                                                      sticky="w", padx=18, pady=(4,0))
-            e = make_entry(p, "", width=270)
-            e.grid(row=i*2+2, column=0, padx=18, pady=(0,4))
-            setattr(self, attr, e)
-
-        # Description
-        row_base = len(fields)*2 + 1
-        ctk.CTkLabel(p, text="Description", font=ctk.CTkFont(size=11, weight="bold"),
-                     text_color=GRIS_TEXTE).grid(row=row_base, column=0, sticky="w", padx=18, pady=(4,0))
-        self.entry_desc = ctk.CTkTextbox(p, width=270, height=60, font=ctk.CTkFont(size=12))
-        self.entry_desc.grid(row=row_base+1, column=0, padx=18, pady=(0,4))
-
-        # Boutons
-        btn_row = ctk.CTkFrame(p, fg_color=BLANC)
-        btn_row.grid(row=row_base+2, column=0, pady=10, padx=18)
-        make_button(btn_row, "Enregistrer", self._save, width=128).pack(side="left", padx=4)
-        make_button(btn_row, "Annuler", self._close_form,
-                    color="#546E7A", hover="#37474F", width=100).pack(side="left", padx=4)
-
-        self.lbl_form_err = ctk.CTkLabel(p, text="", text_color=ROUGE,
-                                          font=ctk.CTkFont(size=11), wraplength=280)
-        self.lbl_form_err.grid(row=row_base+3, column=0, padx=18, pady=(0,8))
-
-    # ──────────────────────────────────────
-    #  DONNÉES
-    # ──────────────────────────────────────
-
-    def load_articles(self, q=""):
-        self.tree.delete(*self.tree.get_children())
-        def fetch():
-            r = APIClient.get_articles(q)
-            if r["ok"]:
-                self._articles = r["data"]
-                self.after(0, self._fill_tree)
-            else:
-                self.after(0, lambda: messagebox.showerror("Erreur", r["error"]))
-        threading.Thread(target=fetch, daemon=True).start()
-
-    def _fill_tree(self):
-        self.tree.delete(*self.tree.get_children())
-        for art in self._articles:
-            qte = art["quantite"]
-            tag = "rupture" if qte == 0 else ("alerte" if qte <= 5 else "")
-            self.tree.insert("", "end", iid=str(art["id"]),
-                             values=(art["id"], art["code"], art["titre"],
-                                     art.get("auteur",""), art.get("categorie",""),
-                                     f"{int(art['prix_vente']):,}".replace(",", " "),
-                                     qte),
-                             tags=(tag,))
-        self.lbl_count.configure(text=f"{len(self._articles)} article(s)")
-
-    def _reset_search(self):
-        self.entry_search.delete(0, "end")
+        self.build_ui()
         self.load_articles()
 
-    def _on_select(self, e):
-        sel = self.tree.selection()
-        self._sel_id = int(sel[0]) if sel else None
+    def build_ui(self):
 
-    def _get_article_by_id(self, aid):
-        return next((a for a in self._articles if a["id"] == aid), None)
+        # HEADER
+        header = ctk.CTkFrame(self, fg_color=BLANC, height=70)
+        header.grid(row=0, column=0, sticky="ew")
 
-    # ──────────────────────────────────────
-    #  FORMULAIRE
-    # ──────────────────────────────────────
+        title = ctk.CTkLabel(
+            header,
+            text="Gestion des Articles",
+            font=("Arial", 24, "bold")
+        )
 
-    def _open_add(self):
-        self._mode = "add"
-        self.lbl_form_title.configure(text="  Nouvel Article", text_color=VERT)
-        self._clear_form()
-        self._show_form()
+        title.pack(side="left", padx=20, pady=20)
 
-    def _open_edit(self):
-        if not self._sel_id:
-            messagebox.showinfo("Sélection", "Veuillez sélectionner un article.")
+        # CONTENT
+        content = ctk.CTkFrame(self, fg_color=GRIS_CLAIR)
+        content.grid(row=1, column=0, sticky="nsew", padx=15, pady=15)
+
+        content.grid_columnconfigure(0, weight=3)
+        content.grid_columnconfigure(1, weight=1)
+        content.grid_rowconfigure(0, weight=1)
+
+        # TABLE
+        table_frame = ctk.CTkFrame(content, fg_color=BLANC)
+        table_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
+
+        table_frame.grid_rowconfigure(0, weight=1)
+        table_frame.grid_columnconfigure(0, weight=1)
+
+        columns = (
+            "code",
+            "titre",
+            "auteur",
+            "categorie",
+            "prix",
+            "stock"
+        )
+
+        self.tree = ttk.Treeview(
+            table_frame,
+            columns=columns,
+            show="headings"
+        )
+
+        self.tree.heading("code", text="Code")
+        self.tree.heading("titre", text="Titre")
+        self.tree.heading("auteur", text="Auteur")
+        self.tree.heading("categorie", text="Catégorie")
+        self.tree.heading("prix", text="Prix")
+        self.tree.heading("stock", text="Stock")
+
+        self.tree.grid(row=0, column=0, sticky="nsew")
+
+        scrollbar = ttk.Scrollbar(
+            table_frame,
+            orient="vertical",
+            command=self.tree.yview
+        )
+
+        scrollbar.grid(row=0, column=1, sticky="ns")
+
+        self.tree.configure(yscrollcommand=scrollbar.set)
+
+        # FORM
+        form_frame = ctk.CTkFrame(content, fg_color=BLANC)
+        form_frame.grid(row=0, column=1, sticky="nsew")
+
+        title_form = ctk.CTkLabel(
+            form_frame,
+            text="Nouvel Article",
+            font=("Arial", 20, "bold"),
+            text_color=VERT
+        )
+
+        title_form.pack(pady=20)
+
+        self.code_entry = ctk.CTkEntry(form_frame, placeholder_text="Code article")
+        self.code_entry.pack(fill="x", padx=20, pady=5)
+
+        self.title_entry = ctk.CTkEntry(form_frame, placeholder_text="Titre")
+        self.title_entry.pack(fill="x", padx=20, pady=5)
+
+        self.author_entry = ctk.CTkEntry(form_frame, placeholder_text="Auteur")
+        self.author_entry.pack(fill="x", padx=20, pady=5)
+
+        self.category_entry = ctk.CTkEntry(form_frame, placeholder_text="Catégorie")
+        self.category_entry.pack(fill="x", padx=20, pady=5)
+
+        self.buy_price_entry = ctk.CTkEntry(form_frame, placeholder_text="Prix achat")
+        self.buy_price_entry.pack(fill="x", padx=20, pady=5)
+
+        self.sell_price_entry = ctk.CTkEntry(form_frame, placeholder_text="Prix vente")
+        self.sell_price_entry.pack(fill="x", padx=20, pady=5)
+
+        self.stock_entry = ctk.CTkEntry(form_frame, placeholder_text="Quantité")
+        self.stock_entry.pack(fill="x", padx=20, pady=5)
+
+        # BUTTONS
+        btn_frame = ctk.CTkFrame(form_frame, fg_color="transparent")
+        btn_frame.pack(fill="x", padx=20, pady=20)
+
+        save_btn = ctk.CTkButton(
+            btn_frame,
+            text="Enregistrer",
+            fg_color=VERT,
+            command=self.save_article
+        )
+
+        save_btn.pack(side="left", expand=True, padx=5)
+
+        cancel_btn = ctk.CTkButton(
+            btn_frame,
+            text="Annuler",
+            fg_color=ROUGE,
+            command=self.clear_fields
+        )
+
+        cancel_btn.pack(side="left", expand=True, padx=5)
+
+    def load_articles(self):
+
+        result = APIClient.get_articles()
+
+        if not result["ok"]:
             return
-        art = self._get_article_by_id(self._sel_id)
-        if not art: return
-        self._mode = "edit"
-        self.lbl_form_title.configure(text="  Modifier l'Article", text_color=BLEU)
-        self._clear_form()
-        self.entry_code.insert(0, art.get("code",""))
-        self.entry_titre.insert(0, art.get("titre",""))
-        self.entry_auteur.insert(0, art.get("auteur",""))
-        self.entry_cat.insert(0, art.get("categorie",""))
-        self.entry_pa.insert(0, str(art.get("prix_achat",0)))
-        self.entry_pv.insert(0, str(art.get("prix_vente",0)))
-        self.entry_qte.insert(0, str(art.get("quantite",0)))
-        self.entry_desc.insert("1.0", art.get("description",""))
-        self._show_form()
 
-    def _show_form(self):
-        self.form_panel.grid()
-        self.form_panel.master.grid_columnconfigure(1, minsize=340)
+        self.tree.delete(*self.tree.get_children())
 
-    def _close_form(self):
-        self.form_panel.grid_remove()
-        self.form_panel.master.grid_columnconfigure(1, minsize=0)
+        for article in result["data"]:
 
-    def _clear_form(self):
-        for attr in ("entry_code","entry_titre","entry_auteur","entry_cat",
-                     "entry_pa","entry_pv","entry_qte"):
-            getattr(self, attr).delete(0, "end")
-        self.entry_desc.delete("1.0", "end")
-        self.lbl_form_err.configure(text="")
+            self.tree.insert(
+                "",
+                "end",
+                values=(
+                    article.get("code", ""),
+                    article.get("titre", ""),
+                    article.get("auteur", ""),
+                    article.get("categorie", ""),
+                    article.get("prix_vente", 0),
+                    article.get("quantite", 0)
+                )
+            )
 
-    def _save(self):
-        code  = self.entry_code.get().strip()
-        titre = self.entry_titre.get().strip()
-        pv    = self.entry_pv.get().strip()
-        qte   = self.entry_qte.get().strip()
+    def save_article(self):
 
-        if not code or not titre or not pv or not qte:
-            self.lbl_form_err.configure(text="Les champs * sont obligatoires.")
-            return
-        try:
-            pv_f  = float(pv.replace(",","."))
-            pa_f  = float(self.entry_pa.get().replace(",",".") or "0")
-            qte_i = int(qte)
-        except ValueError:
-            self.lbl_form_err.configure(text="Prix et quantite doivent etre des nombres.")
+        code = self.code_entry.get()
+        titre = self.title_entry.get()
+
+        if not code or not titre:
+            messagebox.showwarning(
+                "Erreur",
+                "Veuillez remplir les champs obligatoires"
+            )
             return
 
         payload = {
-            "code": code, "titre": titre,
-            "auteur":      self.entry_auteur.get().strip(),
-            "categorie":   self.entry_cat.get().strip(),
-            "prix_achat":  pa_f, "prix_vente": pv_f,
-            "quantite":    qte_i,
-            "description": self.entry_desc.get("1.0","end").strip()
+            "code": code,
+            "titre": titre,
+            "auteur": self.author_entry.get(),
+            "categorie": self.category_entry.get(),
+            "prix_achat": self.buy_price_entry.get(),
+            "prix_vente": self.sell_price_entry.get(),
+            "quantite": self.stock_entry.get()
         }
 
-        self.lbl_form_err.configure(text="Enregistrement...", text_color=VERT)
+        result = APIClient.create_article(payload)
 
-        def do():
-            if self._mode == "add":
-                r = APIClient.create_article(payload)
-            else:
-                r = APIClient.update_article(self._sel_id, payload)
-            if r["ok"]:
-                self.after(0, lambda: (self._close_form(), self.load_articles(),
-                                       messagebox.showinfo("Succes",
-                                       "Article enregistre avec succes !")))
-            else:
-                self.after(0, lambda: self.lbl_form_err.configure(
-                    text=r["error"], text_color=ROUGE))
-        threading.Thread(target=do, daemon=True).start()
+        if result["ok"]:
 
-    def _delete(self):
-        if not self._sel_id:
-            messagebox.showinfo("Selection", "Selectionnez un article.")
-            return
-        art = self._get_article_by_id(self._sel_id)
-        if not messagebox.askyesno("Confirmer",
-                f"Supprimer '{art['titre']}' ?\nCette action est irreversible."):
-            return
-        def do():
-            r = APIClient.delete_article(self._sel_id)
-            if r["ok"]:
-                self.after(0, lambda: (self.load_articles(),
-                                       messagebox.showinfo("Succes","Article supprime.")))
-            else:
-                self.after(0, lambda: messagebox.showerror("Erreur", r["error"]))
-        threading.Thread(target=do, daemon=True).start()
+            messagebox.showinfo(
+                "Succès",
+                "Article enregistré"
+            )
+
+            self.clear_fields()
+            self.load_articles()
+
+        else:
+
+            messagebox.showerror(
+                "Erreur",
+                result["error"]
+            )
+
+    def clear_fields(self):
+
+        self.code_entry.delete(0, "end")
+        self.title_entry.delete(0, "end")
+        self.author_entry.delete(0, "end")
+        self.category_entry.delete(0, "end")
+        self.buy_price_entry.delete(0, "end")
+        self.sell_price_entry.delete(0, "end")
+        self.stock_entry.delete(0, "end")
