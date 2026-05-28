@@ -1,191 +1,211 @@
-# =========================
-# main.py
-# =========================
+"""
+LibrairieCI Pro - Application principale
+Point d'entrée desktop
+"""
+
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "frames"))
 
 import customtkinter as ctk
-
+import tkinter as tk
+from tkinter import messagebox
+from theme import setup_theme, VERT, VERT_SOMBRE, VERT_CLAIR, BLANC, GRIS_CLAIR, GRIS, GRIS_TEXTE, NOIR_TEXTE, ROUGE, ORANGE, BLEU
+from api_client import session
+from frames.login_frame     import LoginFrame
 from frames.dashboard_frame import DashboardFrame
-from frames.vente_frame import VenteFrame
-from frames.stock_frame import StockFrame
-from frames.articles_frame import ArticlesFrame
-from frames.rapports_frame import RapportsFrame
-from frames.users_frame import UsersFrame
-
-ctk.set_appearance_mode("light")
-ctk.set_default_color_theme("green")
+from frames.articles_frame  import ArticlesFrame
+from frames.vente_frame     import VenteFrame
+from frames.stock_frame     import StockFrame
+from frames.users_frame     import UsersFrame
+from frames.rapports_frame  import RapportsFrame
 
 
 class LibrairieApp(ctk.CTk):
 
     def __init__(self):
         super().__init__()
+        setup_theme()
+        self.title("LibrairieCI  –  Gestion de Librairie")
+        self.geometry("1280x780")
+        self.minsize(1024, 680)
+        self.configure(fg_color=GRIS_CLAIR)
 
-        self.title("LibrairieCI — Gestion de Librairie")
-        self.geometry("1600x900")
+        # Icône (si disponible)
+        try:
+            self.iconbitmap(os.path.join(os.path.dirname(__file__), "icon.ico"))
+        except Exception:
+            pass
 
-        # ======================
-        # SIDEBAR
-        # ======================
+        self._current_frame = None
+        self._sidebar       = None
+        self._content       = None
+        self._sidebar_btns  = {}
 
-        self.sidebar = ctk.CTkFrame(
-            self,
-            width=260,
-            fg_color="#008F39",
-            corner_radius=0
-        )
-        self.sidebar.pack(side="left", fill="y")
-        self.sidebar.pack_propagate(False)
+        self._show_login()
 
-        # ======================
-        # CONTENT
-        # ======================
+    # ═══════════════════════════════════════════════
+    #  ÉCRAN DE CONNEXION
+    # ═══════════════════════════════════════════════
 
-        self.content = ctk.CTkFrame(
-            self,
-            fg_color="#EDEFF3",
-            corner_radius=0
-        )
-        self.content.pack(side="right", fill="both", expand=True)
+    def _show_login(self):
+        for w in self.winfo_children():
+            w.destroy()
+        self.geometry("1100x680")
+        self.resizable(True, True)
 
-        # ======================
-        # LOGO
-        # ======================
-
-        logo = ctk.CTkLabel(
-            self.sidebar,
-            text="📚  LibrairieCI",
-            font=("Arial", 24, "bold"),
-            text_color="white"
-        )
-        logo.pack(pady=(30, 10))
-
-        subtitle = ctk.CTkLabel(
-            self.sidebar,
-            text="Gestion Professionnelle",
-            font=("Arial", 14),
-            text_color="#DDEBDD"
-        )
-        subtitle.pack(pady=(0, 30))
-
-        # ======================
-        # USER BOX
-        # ======================
-
-        user_box = ctk.CTkFrame(
-            self.sidebar,
-            fg_color="#007532",
-            corner_radius=0,
-            height=90
-        )
-        user_box.pack(fill="x")
-
-        user_title = ctk.CTkLabel(
-            user_box,
-            text="👤  Système Admin",
-            font=("Arial", 16, "bold"),
-            text_color="white"
-        )
-        user_title.pack(pady=(18, 4))
-
-        user_name = ctk.CTkLabel(
-            user_box,
-            text="🗝 Administrateur",
-            font=("Arial", 13),
-            text_color="#DDEBDD"
-        )
-        user_name.pack()
-
-        # ======================
-        # PAGES
-        # ======================
-
-        self.frames = {}
-
-        self.frames["dashboard"] = DashboardFrame(self.content)
-        self.frames["vente"] = VenteFrame(self.content)
-        self.frames["stock"] = StockFrame(self.content)
-        self.frames["articles"] = ArticlesFrame(self.content)
-        self.frames["rapports"] = RapportsFrame(self.content)
-        self.frames["users"] = UsersFrame(self.content)
-
-        # ======================
-        # MENU BUTTONS
-        # ======================
-
-        self.create_menu_button(
-            "🏠  Tableau de bord",
-            "dashboard"
-        )
-
-        self.create_menu_button(
-            "🛒  Nouvelle Vente",
-            "vente"
-        )
-
-        self.create_menu_button(
-            "📦  Stock",
-            "stock"
-        )
-
-        self.create_menu_button(
-            "📘  Articles",
-            "articles"
-        )
-
-        self.create_menu_button(
-            "📊  Rapports & Stats",
-            "rapports"
-        )
-
-        self.create_menu_button(
-            "👥  Utilisateurs",
-            "users"
-        )
-
-        # ======================
-        # PAGE PAR DEFAUT
-        # ======================
-
-        self.show_frame("dashboard")
-
-    # =========================
-    # MENU BUTTON
-    # =========================
-
-    def create_menu_button(self, text, frame_name):
-
-        btn = ctk.CTkButton(
-            self.sidebar,
-            text=text,
-            height=50,
-            anchor="w",
-            fg_color="#008F39",
-            hover_color="#00A944",
-            corner_radius=0,
-            font=("Arial", 15, "bold"),
-            command=lambda: self.show_frame(frame_name)
-        )
-
-        btn.pack(fill="x")
-
-    # =========================
-    # SHOW FRAME
-    # =========================
-
-    def show_frame(self, name):
-
-        # cacher toutes les pages
-        for frame in self.frames.values():
-            frame.pack_forget()
-
-        # afficher une seule page
-        frame = self.frames[name]
+        frame = LoginFrame(self, on_success=self._after_login)
         frame.pack(fill="both", expand=True)
 
+    def _after_login(self):
+        self.geometry("1280x780")
+        self._build_main()
+        self._navigate("dashboard")
 
-# =========================
-# START APP
-# =========================
+    # ═══════════════════════════════════════════════
+    #  LAYOUT PRINCIPAL
+    # ═══════════════════════════════════════════════
+
+    def _build_main(self):
+        for w in self.winfo_children():
+            w.destroy()
+
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+
+        # ── SIDEBAR ──────────────────────────
+        self._sidebar = ctk.CTkFrame(self, fg_color=VERT, width=230, corner_radius=0)
+        self._sidebar.grid(row=0, column=0, sticky="nsew")
+        self._sidebar.grid_propagate(False)
+        self._sidebar.grid_rowconfigure(10, weight=1)
+
+        # Logo / Titre
+        logo_frame = ctk.CTkFrame(self._sidebar, fg_color=VERT_SOMBRE, height=90, corner_radius=0)
+        logo_frame.pack(fill="x")
+        logo_frame.pack_propagate(False)
+
+        ctk.CTkLabel(logo_frame, text="📚  LibrairieCI",
+                     font=ctk.CTkFont(size=19, weight="bold"),
+                     text_color=BLANC).pack(pady=(18, 2))
+        ctk.CTkLabel(logo_frame, text="Gestion Professionnelle",
+                     font=ctk.CTkFont(size=10), text_color="#A5D6A7").pack()
+
+        # Infos utilisateur
+        user_card = ctk.CTkFrame(self._sidebar, fg_color="#005F2B", height=68, corner_radius=0)
+        user_card.pack(fill="x")
+        user_card.pack_propagate(False)
+
+        ctk.CTkLabel(user_card,
+                     text=f"👤  {session.nom_complet}",
+                     font=ctk.CTkFont(size=12, weight="bold"), text_color=BLANC
+                     ).pack(pady=(10,0))
+        ctk.CTkLabel(user_card,
+                     text=f"{'🔑 Administrateur' if session.is_admin else '👷 Employé'}",
+                     font=ctk.CTkFont(size=10), text_color="#C8E6C9"
+                     ).pack()
+
+        # Séparateur
+        ctk.CTkFrame(self._sidebar, fg_color="#81C784", height=1).pack(fill="x", pady=8)
+
+        # ── Boutons navigation ──
+        menus = [
+            ("dashboard", "🏠",  "Tableau de bord",      True),
+            ("vente",     "🛒",  "Nouvelle Vente",        True),
+            ("stock",     "📦",  "Stock",                 True),
+            ("articles",  "📖",  "Articles",              session.is_admin),
+            ("rapports",  "📊",  "Rapports & Stats",      session.is_admin),
+            ("users",     "👥",  "Utilisateurs",          session.is_admin),
+        ]
+
+        for section, icon, label, visible in menus:
+            if not visible:
+                continue
+            btn = ctk.CTkButton(
+                self._sidebar,
+                text=f"  {icon}  {label}",
+                command=lambda s=section: self._navigate(s),
+                anchor="w",
+                fg_color="transparent",
+                hover_color="#00A04A",
+                text_color=BLANC,
+                font=ctk.CTkFont(size=13),
+                height=44,
+                corner_radius=0,
+            )
+            btn.pack(fill="x")
+            self._sidebar_btns[section] = btn
+
+        # Séparateur bas
+        ctk.CTkFrame(self._sidebar, fg_color="#81C784", height=1).pack(fill="x", side="bottom", pady=0)
+
+        # Bouton déconnexion
+        ctk.CTkButton(
+            self._sidebar,
+            text="  ⬅  Déconnexion",
+            command=self._deconnecter,
+            anchor="w",
+            fg_color="#B71C1C",
+            hover_color="#7F0000",
+            text_color=BLANC,
+            font=ctk.CTkFont(size=13),
+            height=46,
+            corner_radius=0,
+        ).pack(fill="x", side="bottom")
+
+        # Version
+        ctk.CTkLabel(self._sidebar, text="v2.0 – LibrairieCI",
+                     font=ctk.CTkFont(size=9), text_color="#81C784"
+                     ).pack(side="bottom", pady=4)
+
+        # ── ZONE CONTENU ──────────────────────
+        self._content = ctk.CTkFrame(self, fg_color=GRIS_CLAIR, corner_radius=0)
+        self._content.grid(row=0, column=1, sticky="nsew")
+
+    # ═══════════════════════════════════════════════
+    #  NAVIGATION
+    # ═══════════════════════════════════════════════
+
+    def _navigate(self, section: str):
+        # Surbrillance bouton actif
+        for s, btn in self._sidebar_btns.items():
+            btn.configure(fg_color="#00A04A" if s == section else "transparent",
+                          font=ctk.CTkFont(size=13, weight="bold" if s == section else "normal"))
+
+        # Détruire frame précédent
+        if self._current_frame:
+            self._current_frame.destroy()
+
+        # Charger nouveau frame
+        frame_map = {
+            "dashboard": lambda: DashboardFrame(self._content, self._navigate),
+            "vente":     lambda: VenteFrame(self._content),
+            "stock":     lambda: StockFrame(self._content),
+            "articles":  lambda: ArticlesFrame(self._content) if session.is_admin else None,
+            "rapports":  lambda: RapportsFrame(self._content) if session.is_admin else None,
+            "users":     lambda: UsersFrame(self._content)    if session.is_admin else None,
+        }
+
+        builder = frame_map.get(section)
+        if builder:
+            frame = builder()
+            if frame:
+                frame.pack(fill="both", expand=True)
+                self._current_frame = frame
+
+    def _deconnecter(self):
+        if messagebox.askyesno("Déconnexion", "Voulez-vous vraiment vous déconnecter ?"):
+            session.token      = ""
+            session.role       = ""
+            session.nom_complet = ""
+            session.user_id    = 0
+            self._current_frame = None
+            self._sidebar_btns  = {}
+            self._show_login()
+
+
+# ═══════════════════════════════════════════════
+#  POINT D'ENTRÉE
+# ═══════════════════════════════════════════════
 
 if __name__ == "__main__":
     app = LibrairieApp()
