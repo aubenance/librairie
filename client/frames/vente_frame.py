@@ -44,9 +44,8 @@ class VenteFrame(ctk.CTkFrame):
                                       font=ctk.CTkFont(size=12), text_color=GRIS_TEXTE)
         self.lbl_date.grid(row=0, column=1, padx=20, sticky="e")
 
-        # BUG CORRIGÉ : hover_color -> hover
         make_button(header, "🔄 Actualiser stock", self._load_articles,
-                    color=GRIS_TEXTE, hover="#424242", width=150, height=34
+                    color=GRIS_TEXTE, hover_color="#424242", width=150, height=34
                     ).grid(row=0, column=2, padx=16)
 
         # ── GAUCHE : Catalogue ──
@@ -154,11 +153,10 @@ class VenteFrame(ctk.CTkFrame):
         # Boutons panier
         btn_pan = ctk.CTkFrame(right, fg_color=BLANC)
         btn_pan.grid(row=2, column=0, padx=10, pady=4, sticky="ew")
-        # BUG CORRIGÉ : hover_color -> hover
         make_button(btn_pan, "🗑 Retirer", self._remove_line,
-                    color=ROUGE, hover="#B71C1C", width=110, height=32).pack(side="left", padx=4)
+                    color=ROUGE, hover_color="#B71C1C", width=110, height=32).pack(side="left", padx=4)
         make_button(btn_pan, "🔄 Vider", self._clear_cart,
-                    color="#757575", hover="#424242", width=90, height=32).pack(side="left")
+                    color="#757575", hover_color="#424242", width=90, height=32).pack(side="left")
 
         # Total
         total_card = ctk.CTkFrame(right, fg_color=VERT_CLAIR, corner_radius=10)
@@ -188,9 +186,9 @@ class VenteFrame(ctk.CTkFrame):
             result = APIClient.get_articles()
             if result["ok"]:
                 self._articles = result["data"]
-                self.after(0, self._filter)
+                self._filter()
             else:
-                self.after(0, lambda: self.lbl_cat_count.configure(text="❌ Erreur connexion"))
+                self.lbl_cat_count.configure(text="❌ Erreur")
 
         threading.Thread(target=fetch, daemon=True).start()
 
@@ -244,6 +242,7 @@ class VenteFrame(ctk.CTkFrame):
             messagebox.showwarning("Quantité invalide", "Entrez un nombre entier positif.")
             return
 
+        # Déjà dans le panier ?
         existing = next((l for l in self._panier if l["id"] == art["id"]), None)
         qte_totale = qte + (existing["qte"] if existing else 0)
         if qte_totale > stock:
@@ -322,16 +321,16 @@ class VenteFrame(ctk.CTkFrame):
 
         def do():
             result = APIClient.create_vente(lignes, total)
-            self.after(0, lambda: self.btn_valider.configure(text="✔  VALIDER LA VENTE", state="normal"))
+            self.btn_valider.configure(text="✔  VALIDER LA VENTE", state="normal")
             if result["ok"]:
                 d = result["data"]
                 ticket = self._generer_ticket(d.get("numero",""), total)
-                self.after(0, lambda: messagebox.showinfo("✅  Vente enregistrée !", ticket))
+                messagebox.showinfo("✅  Vente enregistrée !", ticket)
                 self._panier.clear()
-                self.after(0, self._refresh_cart)
-                self._load_articles()
+                self._refresh_cart()
+                self._load_articles()  # Rafraîchir le stock depuis le serveur
             else:
-                self.after(0, lambda: messagebox.showerror("Erreur", result["error"]))
+                messagebox.showerror("Erreur", result["error"])
 
         threading.Thread(target=do, daemon=True).start()
 
