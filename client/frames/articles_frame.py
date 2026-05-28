@@ -293,4 +293,3 @@ class ArticlesFrame(ctk.CTkFrame):
             else:
                 self.after(0, lambda: messagebox.showerror("Erreur", r["error"]))
         threading.Thread(target=do, daemon=True).start()
-        
